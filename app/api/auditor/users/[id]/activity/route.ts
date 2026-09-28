@@ -144,8 +144,22 @@ export async function GET(
     const queryParams: (string | number)[] = [id, session.organizationId];
 
     if (eventType !== 'all') {
-      queryParams.push(`%${eventType}%`);
-      filterClauses.push(`ae.event_type ILIKE $${queryParams.length}`);
+      if (eventType === 'UPLOAD') {
+        filterClauses.push(`(ae.event_type LIKE '%UPLOAD%' OR ae.event_type LIKE '%FILE%')`);
+      } else if (eventType === 'DOWNLOAD' || eventType === 'DEK') {
+        filterClauses.push(`(ae.event_type LIKE '%DEK%' OR ae.event_type LIKE '%DOWNLOAD%' OR ae.event_type LIKE '%READ%' OR ae.event_type LIKE '%VIEW%')`);
+      } else if (eventType === 'INTER_ORG') {
+        filterClauses.push(`(ae.event_type LIKE '%INTER_ORG%' OR ae.event_type LIKE '%FEDERAT%' OR ae.event_type LIKE '%DISPATCH%' OR ae.event_type LIKE '%SHARE%' OR ae.event_type LIKE '%REQUISITION%')`);
+      } else if (eventType === 'APPROV') {
+        filterClauses.push(`(ae.event_type LIKE '%APPROV%' OR ae.event_type LIKE '%ADJUDICAT%')`);
+      } else if (eventType === 'LOGIN' || eventType === 'AUTH') {
+        filterClauses.push(`(ae.event_type LIKE '%LOGIN%' OR ae.event_type LIKE '%LOGOUT%' OR ae.event_type LIKE '%AUTH%' OR ae.event_type LIKE '%SESSION%')`);
+      } else if (eventType === 'BLOCKCHAIN') {
+        filterClauses.push(`(ae.event_type LIKE '%BLOCKCHAIN%' OR ae.event_type LIKE '%ATTEST%')`);
+      } else {
+        queryParams.push(`%${eventType}%`);
+        filterClauses.push(`ae.event_type ILIKE $${queryParams.length}`);
+      }
     }
 
     if (startDate) {

@@ -72,6 +72,80 @@ export function canManageLegalHolds(session: UserSessionPayload): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Sovereign Federation & Inter-Agency Collaboration Helpers
+// ---------------------------------------------------------------------------
+
+export function canViewInterOrg(session: UserSessionPayload): boolean {
+  return isSuperAdmin(session) || hasAnyPermission(session, [
+    'INTER_ORG_VIEW',
+    'INTER_ORG_DISPATCH',
+    'INTER_ORG_REQUEST',
+    'INTER_ORG_RESPOND',
+    'DOCUMENT_VIEW',
+    'PERMISSION_MANAGE'
+  ]);
+}
+
+export function canDispatchInterOrg(session: UserSessionPayload): boolean {
+  return isSuperAdmin(session) || hasAnyPermission(session, [
+    'INTER_ORG_DISPATCH',
+    'DOCUMENT_MANAGE',
+    'PERMISSION_MANAGE'
+  ]);
+}
+
+export function canRequestInterOrg(session: UserSessionPayload): boolean {
+  return isSuperAdmin(session) || hasAnyPermission(session, [
+    'INTER_ORG_REQUEST',
+    'DOCUMENT_CREATE',
+    'PERMISSION_MANAGE'
+  ]);
+}
+
+export function canRespondInterOrg(session: UserSessionPayload): boolean {
+  return isSuperAdmin(session) || hasAnyPermission(session, [
+    'INTER_ORG_RESPOND',
+    'DOCUMENT_APPROVE',
+    'DOCUMENT_MANAGE',
+    'PERMISSION_MANAGE'
+  ]);
+}
+
+export function canViewCrossOrgAudit(session: UserSessionPayload): boolean {
+  return isSuperAdmin(session) || hasAnyPermission(session, [
+    'INTER_ORG_AUDIT_VIEW',
+    'AUDIT_VIEW',
+    'PERMISSION_MANAGE'
+  ]);
+}
+
+export function canExportCrossOrgAudit(session: UserSessionPayload): boolean {
+  return isSuperAdmin(session) || hasAnyPermission(session, [
+    'INTER_ORG_AUDIT_EXPORT',
+    'AUDIT_EXPORT',
+    'AUDIT_VIEW',
+    'PERMISSION_MANAGE'
+  ]);
+}
+
+export function canViewFederationFleet(session: UserSessionPayload): boolean {
+  return isSuperAdmin(session) || hasAnyPermission(session, [
+    'FEDERATION_VIEW',
+    'FEDERATION_MANAGE',
+    'PERMISSION_MANAGE',
+    'USER_MANAGE',
+    'DEPARTMENT_MANAGE'
+  ]);
+}
+
+export function canManageFederationFleet(session: UserSessionPayload): boolean {
+  return isSuperAdmin(session) || hasAnyPermission(session, [
+    'FEDERATION_MANAGE',
+    'PERMISSION_MANAGE'
+  ]);
+}
+
+// ---------------------------------------------------------------------------
 // Role Checks (only used for SUPER_ADMIN bypass — everything else is permissions)
 // ---------------------------------------------------------------------------
 

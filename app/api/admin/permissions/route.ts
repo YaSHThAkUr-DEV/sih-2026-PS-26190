@@ -14,7 +14,9 @@ export async function GET(req: Request) {
     // Group logically by category
     const categorized = permissions.map((p) => {
       let category = 'Document Management';
-      if (p.code.startsWith('BLOCKCHAIN') || p.code.includes('BLOCKCHAIN')) {
+      if (p.code.startsWith('INTER_ORG') || p.code.startsWith('FEDERATION')) {
+        category = 'Cross-Agency Federation & Inter-Org Hub';
+      } else if (p.code.startsWith('BLOCKCHAIN') || p.code.includes('BLOCKCHAIN')) {
         category = 'Blockchain & Ledger Integrity';
       } else if (p.code.startsWith('AUDIT') || p.code.includes('AUDIT')) {
         category = 'Audit & Forensics';

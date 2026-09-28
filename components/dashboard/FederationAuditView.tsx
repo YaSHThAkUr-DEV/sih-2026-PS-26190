@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 interface FederationAuditViewProps {
   currentUserId?: string;
   currentUserRoles?: string[];
+  currentUserPermissions?: string[];
   currentUserClearance?: number;
   currentOrg?: {
     id: string;
@@ -50,9 +51,13 @@ interface AuditLogItem {
 export default function FederationAuditView({
   currentUserId,
   currentUserRoles = [],
+  currentUserPermissions = [],
   currentUserClearance = 5,
   currentOrg,
 }: FederationAuditViewProps) {
+  const isSuperAdmin = currentUserRoles.includes('SUPER_ADMIN');
+  const canExport = isSuperAdmin || currentUserPermissions.includes('INTER_ORG_AUDIT_EXPORT') || currentUserPermissions.includes('AUDIT_EXPORT') || currentUserPermissions.includes('PERMISSION_MANAGE');
+
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [stats, setStats] = useState<{
     totalAccessEvents?: number;
@@ -123,6 +128,17 @@ export default function FederationAuditView({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            {canExport && (
+              <button
+                onClick={() => {
+                  window.location.href = '/api/auditor/export';
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-[#f0f3ff] text-[#151c27] border border-[#D8DEEA] text-xs font-semibold transition-all shadow-xs cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px] text-[#3f5e93]">download</span>
+                <span>Export Manifest</span>
+              </button>
+            )}
             <button
               onClick={() => fetchAuditLogs()}
               disabled={loading}

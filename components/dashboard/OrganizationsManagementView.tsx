@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { MODULE_DESCRIPTIONS, OrganizationFeatureConfig } from '@/lib/service/service-config-shared';
+import { ServiceSetupModal } from './ServiceSetupModal';
 
 interface OrganizationsManagementViewProps {
   currentUserId?: string;
   currentUserRoles?: string[];
+  currentUserPermissions?: string[];
   currentOrg?: {
     id: string;
     code: string;
@@ -42,14 +43,18 @@ interface FleetOrganization {
 export default function OrganizationsManagementView({
   currentUserId,
   currentUserRoles = [],
+  currentUserPermissions = [],
   currentOrg,
   onNavigateTab,
 }: OrganizationsManagementViewProps) {
-  // Main View Navigation: 'fleet' | 'inspector' | 'onboarding' | 'taxonomies'
-  const [activeMainTab, setActiveMainTab] = useState<'fleet' | 'inspector' | 'onboarding' | 'taxonomies'>('fleet');
+  const isSuperAdmin = currentUserRoles.includes('SUPER_ADMIN');
+  const canManageFleet = isSuperAdmin || currentUserPermissions.includes('FEDERATION_MANAGE') || currentUserPermissions.includes('PERMISSION_MANAGE');
 
-  // Inspector sub-tab: 'profile' | 'departments' | 'users' | 'vault' | 'policies' | 'exchanges'
-  const [inspectorTab, setInspectorTab] = useState<'profile' | 'departments' | 'users' | 'vault' | 'policies' | 'exchanges'>('profile');
+  // Main View Navigation: 'fleet' | 'inspector' | 'taxonomies'
+  const [activeMainTab, setActiveMainTab] = useState<'fleet' | 'inspector' | 'taxonomies'>('fleet');
+
+  // Inspector sub-tab: 'profile' | 'departments' | 'users' | 'vault' | 'exchanges'
+  const [inspectorTab, setInspectorTab] = useState<'profile' | 'departments' | 'users' | 'vault' | 'exchanges'>('profile');
 
   // Fleet data
   const [fleetSummary, setFleetSummary] = useState<any>({});
@@ -108,33 +113,8 @@ export default function OrganizationsManagementView({
     roleCodes: ['OFFICER'],
   });
 
-  // Policy Config Modal / State
-  const [editFeatures, setEditFeatures] = useState<OrganizationFeatureConfig>({
-    feature_approvals: true,
-    feature_section_65b: true,
-    feature_retention_holds: true,
-    feature_blockchain: true,
-    feature_deep_ocr: true,
-    feature_inter_org_collaboration: true,
-  });
-
-  // Onboarding Wizard Form
-  const [onboardForm, setOnboardForm] = useState({
-    officeName: '',
-    officeCode: '',
-    agencyCode: '',
-    tierId: '',
-    domainCategoryId: '',
-    jurisdictionRegionId: '',
-    nodalOfficerName: '',
-    nodalOfficerEmail: '',
-    nodalOfficerPhone: '',
-    adminFullName: '',
-    adminEmail: '',
-    adminPassword: 'Password@DMS2026!',
-    adminEmployeeCode: '',
-    adminDesignation: 'System Administrator',
-  });
+  // Service Setup Modal State
+  const [setupModalOpen, setSetupModalOpen] = useState(false);
 
   // Toast
   const [toast, setToast] = useState<{ show: boolean; message: string; type?: 'success' | 'error' }>({
@@ -196,14 +176,6 @@ export default function OrganizationsManagementView({
           status: org.status || 'ACTIVE',
           isVerified: org.isVerified !== false,
         });
-        setEditFeatures({
-          feature_approvals: org.features?.feature_approvals !== false,
-          feature_section_65b: org.features?.feature_section_65b !== false,
-          feature_retention_holds: org.features?.feature_retention_holds !== false,
-          feature_blockchain: org.features?.feature_blockchain !== false,
-          feature_deep_ocr: org.features?.feature_deep_ocr !== false,
-          feature_inter_org_collaboration: org.features?.feature_inter_org_collaboration !== false,
-        });
       } else {
         showToast(data.error || 'Failed to load organization details', 'error');
       }
@@ -221,29 +193,6 @@ export default function OrganizationsManagementView({
     loadOrgDetails(orgId);
   };
 
-  // 1-Click Session Switcher for Testing
-  const handleSwitchSession = async (orgId: string, userId?: string) => {
-    try {
-      const res = await fetch(`/api/collaboration/admin/organizations/${orgId}/switch-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message || 'Switched organization session! Reloading dashboard...', 'success');
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
-      } else {
-        showToast(data.error || 'Failed to switch session', 'error');
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Error switching session', 'error');
-    }
-  };
-
   // Handle Save Organization Profile
   const handleSaveOrgProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -253,10 +202,7 @@ export default function OrganizationsManagementView({
       const res = await fetch(`/api/collaboration/admin/organizations/${selectedOrgId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...editOrgForm,
-          features: editFeatures,
-        }),
+        body: JSON.stringify(editOrgForm),
       });
 
       const data = await res.json();
@@ -332,73 +278,7 @@ export default function OrganizationsManagementView({
         showToast(data.error || 'Failed to enroll user', 'error');
       }
     } catch (err: any) {
-      showToast(err.message || 'Error enrolling user', 'error');
-    }
-  };
-
-  // Handle Onboarding Submit
-  const handleOnboardSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!onboardForm.officeName || !onboardForm.officeCode || !onboardForm.adminEmail) {
-      showToast('Office Name, Code, and Admin Email are required', 'error');
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/collaboration/directory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          officeName: onboardForm.officeName,
-          officeCode: onboardForm.officeCode,
-          agencyCode: onboardForm.agencyCode,
-          tierId: onboardForm.tierId || null,
-          domainCategoryId: onboardForm.domainCategoryId || null,
-          jurisdictionRegionId: onboardForm.jurisdictionRegionId || null,
-          nodalOfficerName: onboardForm.nodalOfficerName,
-          nodalOfficerEmail: onboardForm.nodalOfficerEmail,
-          nodalOfficerPhone: onboardForm.nodalOfficerPhone,
-          adminUser: {
-            fullName: onboardForm.adminFullName || `${onboardForm.officeName} Admin`,
-            email: onboardForm.adminEmail,
-            employeeCode: onboardForm.adminEmployeeCode || `EMP-${onboardForm.officeCode.toUpperCase()}-001`,
-            password: onboardForm.adminPassword,
-            designation: onboardForm.adminDesignation,
-            username: onboardForm.adminEmail.split('@')[0],
-          },
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        showToast(data.message || 'Organization successfully onboarded!');
-        setOnboardForm({
-          officeName: '',
-          officeCode: '',
-          agencyCode: '',
-          tierId: '',
-          domainCategoryId: '',
-          jurisdictionRegionId: '',
-          nodalOfficerName: '',
-          nodalOfficerEmail: '',
-          nodalOfficerPhone: '',
-          adminFullName: '',
-          adminEmail: '',
-          adminPassword: 'Password@DMS2026!',
-          adminEmployeeCode: '',
-          adminDesignation: 'System Administrator',
-        });
-        fetchFleetData();
-        if (data.organization?.id) {
-          handleSelectOrgToInspect(data.organization.id);
-        } else {
-          setActiveMainTab('fleet');
-        }
-      } else {
-        showToast(data.error || 'Onboarding failed', 'error');
-      }
-    } catch (err: any) {
-      showToast(err.message || 'Network error', 'error');
+        showToast(err.message || 'Error enrolling user', 'error');
     }
   };
 
@@ -459,13 +339,15 @@ export default function OrganizationsManagementView({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setActiveMainTab('onboarding')}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#000000] text-white hover:bg-[#181c22] text-xs font-semibold transition shadow-[0_4px_12px_rgba(16,20,26,0.22)] cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">domain_add</span>
-              <span>Onboard New Entity</span>
-            </button>
+            {canManageFleet && (
+              <button
+                onClick={() => setSetupModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#000000] text-white hover:bg-[#181c22] text-xs font-semibold transition shadow-[0_4px_12px_rgba(16,20,26,0.22)] cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">domain_add</span>
+                <span>Onboard New Entity</span>
+              </button>
+            )}
 
             <button
               onClick={fetchFleetData}
@@ -554,24 +436,12 @@ export default function OrganizationsManagementView({
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">tune</span>
-            <span>Organization Deep-Dive &amp; Tester</span>
+            <span>Organization Inspector &amp; Configuration</span>
             {selectedOrgId && (
               <span className="px-1.5 py-0.2 rounded-full text-[9px] bg-white/20 text-white font-mono">
                 {orgDetails?.organization?.code || 'ACTIVE'}
               </span>
             )}
-          </button>
-
-          <button
-            onClick={() => setActiveMainTab('onboarding')}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-              activeMainTab === 'onboarding'
-                ? 'bg-[#000000] text-white shadow-xs'
-                : 'text-[#45474b] hover:text-[#10141A] hover:bg-white/60'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">domain_add</span>
-            <span>Onboarding Studio</span>
           </button>
 
           <button
@@ -588,7 +458,7 @@ export default function OrganizationsManagementView({
         </div>
 
         {/* ========================================================================= */}
-        {/* SECTION 1: ORGANIZATIONS FLEET DIRECTORY & TEST BENCH */}
+        {/* SECTION 1: ORGANIZATIONS FLEET DIRECTORY */}
         {/* ========================================================================= */}
         {activeMainTab === 'fleet' && (
           <div className="space-y-4">
@@ -674,7 +544,7 @@ export default function OrganizationsManagementView({
                         <th className="py-3 px-2 text-center">Vault</th>
                         <th className="py-3 px-3 text-center">Exchanges</th>
                         <th className="py-3 px-3">Status</th>
-                        <th className="py-3 px-4 text-right">Actions &amp; Testing</th>
+                        <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
@@ -780,20 +650,11 @@ export default function OrganizationsManagementView({
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
                                     onClick={() => handleSelectOrgToInspect(org.id)}
-                                    className="px-3 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                                    className="px-3.5 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs"
                                     title="Inspect & Configure"
                                   >
                                     <span className="material-symbols-outlined text-[14px]">tune</span>
                                     <span>Inspect</span>
-                                  </button>
-
-                                  <button
-                                    onClick={() => handleSwitchSession(org.id)}
-                                    className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
-                                    title="Test as Org Admin"
-                                  >
-                                    <span className="material-symbols-outlined text-[14px] text-[#3f5e93]">login</span>
-                                    <span>Test</span>
                                   </button>
                                 </div>
                               </td>
@@ -866,22 +727,13 @@ export default function OrganizationsManagementView({
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#D8DEEA]/50">
+                      <div className="pt-2 border-t border-[#D8DEEA]/50">
                         <button
                           onClick={() => handleSelectOrgToInspect(org.id)}
-                          className="flex-1 py-1.5 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer"
+                          className="w-full py-1.5 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-2xs"
                         >
                           <span className="material-symbols-outlined text-[15px]">tune</span>
                           <span>Inspect &amp; Manage</span>
-                        </button>
-
-                        <button
-                          onClick={() => handleSwitchSession(org.id)}
-                          className="px-3 py-1.5 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
-                          title="Simulate / Test Org"
-                        >
-                          <span className="material-symbols-outlined text-[15px] text-[#3f5e93]">login</span>
-                          <span>Test</span>
                         </button>
                       </div>
                     </div>
@@ -893,7 +745,7 @@ export default function OrganizationsManagementView({
         )}
 
         {/* ========================================================================= */}
-        {/* SECTION 2: ORGANIZATION DEEP-DIVE INSPECTOR & TEST CONSOLE */}
+        {/* SECTION 2: ORGANIZATION DEEP-DIVE INSPECTOR & CONFIGURATION */}
         {/* ========================================================================= */}
         {activeMainTab === 'inspector' && (
           <div className="space-y-6">
@@ -920,12 +772,13 @@ export default function OrganizationsManagementView({
                 </div>
               </div>
 
-              {/* Quick Org Selector Dropdown & Test Switch */}
+              {/* Quick Org Selector Dropdown */}
               <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-semibold text-[#6B7280]">Select Entity:</span>
                 <select
                   value={selectedOrgId || ''}
                   onChange={(e) => handleSelectOrgToInspect(e.target.value)}
-                  className="h-9 px-3 rounded-full bg-[#f0f3ff] border border-[#D8DEEA] text-xs text-[#151c27] font-semibold outline-none focus:bg-white"
+                  className="h-9 px-3.5 rounded-full bg-[#f0f3ff] border border-[#D8DEEA] text-xs text-[#151c27] font-semibold outline-none focus:bg-white"
                 >
                   {organizations.map((o) => (
                     <option key={o.id} value={o.id}>
@@ -933,16 +786,6 @@ export default function OrganizationsManagementView({
                     </option>
                   ))}
                 </select>
-
-                <button
-                  onClick={() => selectedOrgId && handleSwitchSession(selectedOrgId)}
-                  disabled={!selectedOrgId}
-                  className="px-4 py-2 rounded-full bg-[#3f5e93] hover:bg-[#2f4b7a] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition cursor-pointer"
-                  title="Switch Active Session to this Organization to test as Admin"
-                >
-                  <span className="material-symbols-outlined text-[16px]">switch_account</span>
-                  <span>Test as Org Admin</span>
-                </button>
               </div>
             </div>
 
@@ -953,7 +796,6 @@ export default function OrganizationsManagementView({
                 { id: 'departments', label: `Departments (${orgDetails?.departments?.length || 0})`, icon: 'corporate_fare' },
                 { id: 'users', label: `Officers & Clearance (${orgDetails?.users?.length || 0})`, icon: 'manage_accounts' },
                 { id: 'vault', label: `Document Vault (${orgDetails?.documents?.length || 0})`, icon: 'folder' },
-                { id: 'policies', label: 'Governance Policies', icon: 'policy' },
                 { id: 'exchanges', label: `Exchanges & Audits (${(orgDetails?.inboundRequests?.length || 0) + (orgDetails?.outboundRequests?.length || 0)})`, icon: 'sync_alt' },
               ].map((sub) => (
                 <button
@@ -1238,8 +1080,7 @@ export default function OrganizationsManagementView({
                         <th className="py-3 px-3">Designation &amp; Department</th>
                         <th className="py-3 px-3">Security Clearance</th>
                         <th className="py-3 px-3">Roles</th>
-                        <th className="py-3 px-3">Status</th>
-                        <th className="py-3 px-4 text-right">Quick Test</th>
+                        <th className="py-3 px-4 text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
@@ -1292,21 +1133,10 @@ export default function OrganizationsManagementView({
                               </div>
                             </td>
 
-                            <td className="py-3 px-3">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <td className="py-3 px-4 text-right">
+                              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 {u.status}
                               </span>
-                            </td>
-
-                            <td className="py-3 px-4 text-right">
-                              <button
-                                onClick={() => handleSwitchSession(selectedOrgId!, u.id)}
-                                className="px-3 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] text-[11px] font-semibold transition flex items-center gap-1 ml-auto cursor-pointer"
-                                title="Login / Simulate this specific officer"
-                              >
-                                <span className="material-symbols-outlined text-[13px] text-[#3f5e93]">login</span>
-                                <span>Simulate</span>
-                              </button>
                             </td>
                           </tr>
                         ))
@@ -1380,69 +1210,7 @@ export default function OrganizationsManagementView({
               </div>
             )}
 
-            {/* INSPECTOR SUB-TAB 5: GOVERNANCE POLICIES & FLAGS */}
-            {!orgDetailsLoading && inspectorTab === 'policies' && orgDetails && (
-              <div className="bg-white rounded-[22px] p-6 border border-[#D8DEEA]/80 shadow-xs space-y-6">
-                <div className="flex items-center justify-between pb-3 border-b border-[#D8DEEA]/60">
-                  <div>
-                    <h3 className="font-bold text-sm text-[#10141A]">Institutional Governance &amp; Security Toggles</h3>
-                    <p className="text-xs text-[#6B7280]">
-                      Control which institutional modules and regulatory workflows are active for {orgDetails.organization?.name}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleSaveOrgProfile}
-                    className="px-5 py-2 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold transition shadow-xs cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">save</span>
-                    <span>Save Policies</span>
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                  {(Object.keys(MODULE_DESCRIPTIONS) as Array<keyof OrganizationFeatureConfig>).map((key) => {
-                    const desc = MODULE_DESCRIPTIONS[key];
-                    const isEnabled = editFeatures[key] !== false;
-                    return (
-                      <div
-                        key={key}
-                        onClick={() => setEditFeatures({ ...editFeatures, [key]: !isEnabled })}
-                        className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                          isEnabled
-                            ? 'bg-[rgba(131,162,219,0.06)] border-[#83A2DB]/50'
-                            : 'bg-[#f0f3ff]/40 border-[#D8DEEA]/80 opacity-70'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="material-symbols-outlined text-[22px] text-[#3f5e93] mt-0.5">
-                            {desc.icon}
-                          </span>
-                          <div>
-                            <strong className="text-[#10141A] text-xs block">{desc.label}</strong>
-                            <p className="text-[11px] text-[#6B7280] mt-0.5 leading-snug">{desc.description}</p>
-                          </div>
-                        </div>
-
-                        <span
-                          className={`w-11 h-6 rounded-full p-1 transition-all shrink-0 ${
-                            isEnabled ? 'bg-[#000000]' : 'bg-slate-300'
-                          }`}
-                        >
-                          <span
-                            className={`block w-4 h-4 rounded-full bg-white transition-all ${
-                              isEnabled ? 'translate-x-5' : 'translate-x-0'
-                            }`}
-                          />
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* INSPECTOR SUB-TAB 6: INTER-ORG EXCHANGES & AUDITS */}
+            {/* INSPECTOR SUB-TAB 5: INTER-ORG EXCHANGES & AUDITS */}
             {!orgDetailsLoading && inspectorTab === 'exchanges' && orgDetails && (
               <div className="space-y-6">
                 {/* Inbound Requisitions */}
@@ -1470,8 +1238,8 @@ export default function OrganizationsManagementView({
                             </td>
                           </tr>
                         ) : (
-                          orgDetails.inboundRequests.map((r: any) => (
-                            <tr key={r.id} className="hover:bg-[#f0f3ff]/40">
+                          orgDetails.inboundRequests.map((r: any, idx: number) => (
+                            <tr key={`org-inbound-${r.id}-${idx}`} className="hover:bg-[#f0f3ff]/40">
                               <td className="py-2.5 px-3 font-mono font-bold text-[#3f5e93]">{r.requestNumber}</td>
                               <td className="py-2.5 px-3 font-semibold">{r.requestingOrgName} ({r.requestingOrgCode})</td>
                               <td className="py-2.5 px-3">{r.targetDocumentTitle || r.targetDocumentNumber}</td>
@@ -1518,8 +1286,8 @@ export default function OrganizationsManagementView({
                             </td>
                           </tr>
                         ) : (
-                          orgDetails.outboundRequests.map((r: any) => (
-                            <tr key={r.id} className="hover:bg-[#f0f3ff]/40">
+                          orgDetails.outboundRequests.map((r: any, idx: number) => (
+                            <tr key={`org-outbound-${r.id}-${idx}`} className="hover:bg-[#f0f3ff]/40">
                               <td className="py-2.5 px-3 font-mono font-bold text-[#3f5e93]">{r.requestNumber}</td>
                               <td className="py-2.5 px-3 font-semibold">{r.targetOrgName} ({r.targetOrgCode})</td>
                               <td className="py-2.5 px-3">{r.targetDocumentTitle || r.targetDocumentNumber}</td>
@@ -1546,189 +1314,7 @@ export default function OrganizationsManagementView({
         )}
 
         {/* ========================================================================= */}
-        {/* SECTION 3: ENTITY ONBOARDING STUDIO */}
-        {/* ========================================================================= */}
-        {activeMainTab === 'onboarding' && (
-          <div className="bg-white rounded-[24px] p-6 lg:p-8 border border-[#D8DEEA]/80 shadow-xs max-w-4xl mx-auto w-full space-y-6">
-            <div className="flex items-center gap-3 pb-4 border-b border-[#D8DEEA]/60">
-              <div className="w-12 h-12 rounded-2xl bg-[rgba(131,162,219,0.14)] text-[#3f5e93] border border-[#83A2DB]/30 flex items-center justify-center">
-                <span className="material-symbols-outlined text-[24px]">domain_add</span>
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-[#10141A]">Institutional Onboarding Studio</h3>
-                <p className="text-xs text-[#6B7280]">
-                  Register and provision a sovereign government body or court node with zero hardcoding
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleOnboardSubmit} className="space-y-5 text-xs">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-[#45474b] mb-1">
-                    Government Body / Department Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. High Court of Karnataka"
-                    value={onboardForm.officeName}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, officeName: e.target.value })}
-                    required
-                    className="w-full h-9 px-3.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-[#45474b] mb-1">
-                    Unique Sovereign Organization Code *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. KA-HC-BLR"
-                    value={onboardForm.officeCode}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, officeCode: e.target.value })}
-                    required
-                    className="w-full h-9 px-3.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full font-mono text-xs text-[#151c27] uppercase focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block font-semibold text-[#45474b] mb-1">Government Tier</label>
-                  <select
-                    value={onboardForm.tierId}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, tierId: e.target.value })}
-                    className="w-full h-9 px-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] outline-none focus:bg-white"
-                  >
-                    <option value="">-- Select Government Tier --</option>
-                    {taxonomies.tiers.map((t: any) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-[#45474b] mb-1">Domain Category</label>
-                  <select
-                    value={onboardForm.domainCategoryId}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, domainCategoryId: e.target.value })}
-                    className="w-full h-9 px-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] outline-none focus:bg-white"
-                  >
-                    <option value="">-- Select Domain Category --</option>
-                    {taxonomies.categories.map((c: any) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-[#45474b] mb-1">Jurisdiction Region</label>
-                  <select
-                    value={onboardForm.jurisdictionRegionId}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, jurisdictionRegionId: e.target.value })}
-                    className="w-full h-9 px-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] outline-none focus:bg-white"
-                  >
-                    <option value="">-- Select Region / State --</option>
-                    {taxonomies.regions.map((r: any) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({r.code})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block font-semibold text-[#45474b] mb-1">Nodal Officer Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Registrar General"
-                    value={onboardForm.nodalOfficerName}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, nodalOfficerName: e.target.value })}
-                    className="w-full h-9 px-3.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-[#45474b] mb-1">Nodal Officer Email</label>
-                  <input
-                    type="email"
-                    placeholder="e.g. nodal@judiciary.gov.in"
-                    value={onboardForm.nodalOfficerEmail}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, nodalOfficerEmail: e.target.value })}
-                    className="w-full h-9 px-3.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-[#45474b] mb-1">Nodal Phone</label>
-                  <input
-                    type="text"
-                    placeholder="+91-80-22222222"
-                    value={onboardForm.nodalOfficerPhone}
-                    onChange={(e) => setOnboardForm({ ...onboardForm, nodalOfficerPhone: e.target.value })}
-                    className="w-full h-9 px-3.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-[#D8DEEA]/60 space-y-3">
-                <h4 className="font-bold text-xs text-[#10141A] uppercase tracking-wider text-[#6B7280]">
-                  Principal Organization Administrator Credentials
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block font-semibold text-[#45474b] mb-1">Admin Email Address *</label>
-                    <input
-                      type="email"
-                      placeholder="admin@karnataka.gov.in"
-                      value={onboardForm.adminEmail}
-                      onChange={(e) => setOnboardForm({ ...onboardForm, adminEmail: e.target.value })}
-                      required
-                      className="w-full h-9 px-3.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold text-[#45474b] mb-1">Initial Password *</label>
-                    <input
-                      type="password"
-                      value={onboardForm.adminPassword}
-                      onChange={(e) => setOnboardForm({ ...onboardForm, adminPassword: e.target.value })}
-                      required
-                      className="w-full h-9 px-3.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveMainTab('fleet')}
-                  className="px-4 py-2 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] text-xs font-semibold cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2 rounded-full bg-[#000000] hover:bg-[#181c22] text-white font-semibold text-xs shadow-xs cursor-pointer transition"
-                >
-                  Provision &amp; Connect Node
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* SECTION 4: DYNAMIC TAXONOMIES & SLAS */}
+        {/* SECTION 3: DYNAMIC TAXONOMIES & SLAS */}
         {/* ========================================================================= */}
         {activeMainTab === 'taxonomies' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -1984,6 +1570,17 @@ export default function OrganizationsManagementView({
           </div>
         </div>
       )}
+
+      {/* Service Setup Modal for Onboarding */}
+      <ServiceSetupModal
+        isOpen={setupModalOpen}
+        onClose={() => setSetupModalOpen(false)}
+        onSuccess={(result) => {
+          setSetupModalOpen(false);
+          fetchFleetData();
+          showToast(`Organization "${result.organization.name}" onboarded successfully!`);
+        }}
+      />
     </div>
   );
 }

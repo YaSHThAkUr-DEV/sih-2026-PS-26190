@@ -3,6 +3,7 @@ import { getCurrentSession } from '@/lib/auth/jwt';
 import { query } from '@/lib/db';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { BlockchainService } from '@/lib/blockchain/service';
+import { canRespondInterOrg } from '@/lib/auth/rbac';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const session = await getCurrentSession(req);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
+    }
+
+    if (!canRespondInterOrg(session)) {
+      return NextResponse.json({ error: 'Forbidden: Inter-agency requisition adjudication clearance required' }, { status: 403 });
     }
 
     const { id: requestId } = await params;
@@ -145,12 +150,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       // Resolve Access Mode
       let resolvedAccessModeId = accessModeId;
+      if (resolvedAccessModeId && typeof resolvedAccessModeId === 'string' && !resolvedAccessModeId.includes('-')) {
+        const modeQuery = await query(`SELECT id FROM taxonomy_access_modes WHERE code = $1 LIMIT 1`, [resolvedAccessModeId]);
+        if (modeQuery.length > 0) resolvedAccessModeId = modeQuery[0].id;
+      }
+      if (!resolvedAccessModeId || resolvedAccessModeId === 'FULL_CERTIFIED_DOWNLOAD' || resolvedAccessModeId === 'VIEW_ONLY_WATERMARKED') {
+        const modeCode = resolvedAccessModeId === 'FULL_CERTIFIED_DOWNLOAD' ? 'FULL_CERTIFIED_DOWNLOAD' : 'VIEW_ONLY_WATERMARKED';
+        const modeQuery = await query(`SELECT id FROM taxonomy_access_modes WHERE code = $1 LIMIT 1`, [modeCode]);
+        resolvedAccessModeId = modeQuery[0]?.id;
+      }
       if (!resolvedAccessModeId) {
-        const defaultMode = await query(`SELECT id FROM taxonomy_access_modes WHERE code = 'VIEW_ONLY_WATERMARKED' LIMIT 1`);
+        const defaultMode = await query(`SELECT id FROM taxonomy_access_modes LIMIT 1`);
         resolvedAccessModeId = defaultMode[0]?.id;
       }
 
-      const durationDays = accessDurationDays ? Math.min(60, Math.max(1, Number(accessDurationDays))) : (interReq.requested_access_days || 7);
+      const durationDays = accessDurationDays ? Math.min(90, Math.max(1, Number(accessDurationDays))) : (interReq.requested_access_days || 7);
       const shareNumber = `SHR-FED-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`;
 
       // Generate Ephemeral Share Token Hash
@@ -267,6 +281,39 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           isWatermarked: enableWatermark !== false,
         },
       });
+
+      // 8. Insert to Inter-Org Access Logs for Cross-Org Audit 360 Telemetry
+      const logEventHash = crypto
+        .createHash('sha256')
+        .update(`${createdShare.id}:${session.userId}:${session.organizationId}:${interReq.requesting_org_id}:${ipAddress}:${Date.now()}`)
+        .digest('hex');
+
+      await query(
+        `INSERT INTO inter_org_access_logs (
+           share_id, document_id, requesting_org_id, accessing_user_id,
+           action, ip_address, user_agent, watermark_payload_snapshot, event_hash,
+           blockchain_anchored, blockchain_tx_hash, created_at
+         )
+         VALUES ($1, $2, $3, $4, $5, $6::inet, $7, $8, $9, true, $10, NOW());`,
+        [
+          createdShare.id,
+          doc.id,
+          interReq.requesting_org_id,
+          session.userId,
+          'REQUISITION_ACCESS_GRANTED',
+          ipAddress,
+          req.headers.get('user-agent') || 'NIRMAN Sovereign Highway Protocol/2.0',
+          JSON.stringify({
+            requestNumber: interReq.request_number,
+            shareNumber,
+            requestingOrg: interReq.requesting_org_name,
+            grantingOrg: session.organizationName,
+            durationDays,
+          }),
+          logEventHash,
+          anchorHash,
+        ]
+      );
 
       return NextResponse.json({
         success: true,

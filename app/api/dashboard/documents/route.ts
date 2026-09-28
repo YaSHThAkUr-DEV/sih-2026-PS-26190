@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getCurrentSession();
+    const session = await getCurrentSession(req);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
     }

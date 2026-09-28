@@ -269,7 +269,7 @@ export default function AdministrationView({
   }, [actionFeedback]);
 
   // Initial Fetcher
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
       const [
@@ -325,7 +325,7 @@ export default function AdministrationView({
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedRole]);
 
   const loadOfficeFeatures = useCallback(async () => {
     try {
@@ -339,6 +339,12 @@ export default function AdministrationView({
       console.error('Failed to load office features:', e);
     }
   }, []);
+
+  // Run on mount
+  useEffect(() => {
+    loadAllData();
+    loadOfficeFeatures();
+  }, [loadAllData, loadOfficeFeatures]);
 
   const handleSaveFeatures = async () => {
     setSavingFeatures(true);
@@ -954,8 +960,8 @@ export default function AdministrationView({
               { id: 'hierarchy', label: 'Departments & Teams', icon: 'corporate_fare', count: departments.length },
               { id: 'rbac', label: 'Roles & RBAC', icon: 'shield', count: roles.length },
               { id: 'types_tiers', label: 'Doc Types & Tiers', icon: 'category', count: documentTypes.length },
-              { id: 'policies', label: 'Governance Policies', icon: 'policy', count: policies.length + retentionSchedules.length },
-              { id: 'modules', label: 'Service Modules', icon: 'toggle_on' },
+              { id: 'modules', label: 'Governance Policies', icon: 'verified_user', badge: '6 Policies' },
+              { id: 'policies', label: 'Department Rules & Archival', icon: 'schema', count: policies.length + retentionSchedules.length },
               { id: 'system', label: 'System Telemetry', icon: 'tune' },
             ].map((tab) => (
               <button
@@ -971,7 +977,15 @@ export default function AdministrationView({
                   <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
                   <span className="truncate">{tab.label}</span>
                 </div>
-                {tab.count !== undefined && (
+                {tab.badge ? (
+                  <span
+                    className={`px-2 py-0.5 rounded-full font-sans text-[10px] shrink-0 font-semibold ${
+                      activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-[#E9ECF4] text-[#3f5e93]'
+                    }`}
+                  >
+                    {tab.badge}
+                  </span>
+                ) : tab.count !== undefined ? (
                   <span
                     className={`px-2 py-0.5 rounded-full font-mono text-[10px] shrink-0 font-semibold ${
                       activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-[#E9ECF4] text-[#6B7280]'
@@ -979,7 +993,7 @@ export default function AdministrationView({
                   >
                     {tab.count}
                   </span>
-                )}
+                ) : null}
               </button>
             ))}
           </div>
@@ -1710,58 +1724,63 @@ export default function AdministrationView({
           </div>
         )}
 
-        {/* TAB 6: MODULES */}
+        {/* TAB 5: INSTITUTIONAL GOVERNANCE & SECURITY TOGGLES */}
         {activeTab === 'modules' && (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
+          <div className="bg-white rounded-[24px] p-6 lg:p-7 border border-[#D8DEEA]/80 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#D8DEEA]/60">
               <div>
-                <h2 className="text-xs font-semibold text-[#10141A] uppercase tracking-wider">
-                  Organization Feature Calibration
+                <h2 className="text-sm font-bold text-[#10141A] flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[#3f5e93] text-[20px]">verified_user</span>
+                  <span>Institutional Governance &amp; Security Toggles</span>
                 </h2>
-                <p className="text-xs text-[#6B7280]">
-                  Configure active modular features for {officeInfo?.name || 'this organization'}.
+                <p className="text-xs text-[#6B7280] mt-0.5">
+                  Control which institutional modules and regulatory workflows are active for {officeInfo?.name || 'this sovereign node'}
                 </p>
               </div>
               <button
                 onClick={handleSaveFeatures}
                 disabled={savingFeatures}
-                className="px-4 py-2 bg-[#000000] text-white rounded-full text-xs font-medium hover:bg-[#181c22] transition shadow-[0_6px_18px_rgba(16,20,26,0.22)]"
+                className="px-5 py-2 bg-[#000000] hover:bg-[#181c22] text-white rounded-full text-xs font-semibold shadow-xs flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto shrink-0"
               >
-                {savingFeatures ? 'Saving...' : 'Save Feature Calibration'}
+                <span className="material-symbols-outlined text-[16px]">save</span>
+                <span>{savingFeatures ? 'Saving Policies...' : 'Save Policies'}</span>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               {(Object.keys(MODULE_DESCRIPTIONS) as Array<keyof OrganizationFeatureConfig>).map((key) => {
-                const mod = MODULE_DESCRIPTIONS[key];
-                const isChecked = officeFeatures[key];
+                const desc = MODULE_DESCRIPTIONS[key];
+                const isEnabled = officeFeatures[key] !== false;
                 return (
                   <div
                     key={key}
-                    onClick={() => setOfficeFeatures({ ...officeFeatures, [key]: !isChecked })}
-                    className={`p-4 rounded-[20px] border transition cursor-pointer flex items-start justify-between gap-3 ${isChecked
-                        ? 'bg-[#f0f3ff] border-[#83A2DB]/60'
-                        : 'bg-white border-[#D8DEEA]/60 opacity-80'
-                      }`}
+                    onClick={() => setOfficeFeatures({ ...officeFeatures, [key]: !isEnabled })}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 select-none ${
+                      isEnabled
+                        ? 'bg-[rgba(131,162,219,0.06)] border-[#83A2DB]/50'
+                        : 'bg-[#f0f3ff]/40 border-[#D8DEEA]/80 opacity-70'
+                    }`}
                   >
                     <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => { }}
-                        className="mt-1 w-4 h-4 text-[#3f5e93] rounded"
-                      />
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="material-symbols-outlined text-[18px] text-[#3f5e93]">{mod.icon}</span>
-                          <span className="text-xs font-semibold text-[#10141A]">{mod.label}</span>
-                        </div>
-                        <p className="text-xs text-[#6B7280]">{mod.description}</p>
+                      <span className="material-symbols-outlined text-[22px] text-[#3f5e93] mt-0.5 shrink-0">
+                        {desc.icon}
+                      </span>
+                      <div>
+                        <strong className="text-[#10141A] text-xs block leading-tight font-bold">{desc.label}</strong>
+                        <p className="text-[11px] text-[#6B7280] mt-1 leading-snug">{desc.description}</p>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full uppercase shrink-0 ${isChecked ? 'bg-[#000000] text-white' : 'bg-[#E9ECF4] text-[#6B7280]'
-                      }`}>
-                      {isChecked ? 'Enabled' : 'Disabled'}
+
+                    <span
+                      className={`w-11 h-6 rounded-full p-1 transition-all shrink-0 flex items-center ${
+                        isEnabled ? 'bg-[#000000]' : 'bg-slate-300'
+                      }`}
+                    >
+                      <span
+                        className={`block w-4 h-4 rounded-full bg-white transition-all shadow-xs ${
+                          isEnabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
                     </span>
                   </div>
                 );

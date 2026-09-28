@@ -366,8 +366,8 @@ export default function FederationAdminView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {filteredOrgs.map((org) => (
-                    <tr key={org.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-all">
+                  {filteredOrgs.map((org, idx) => (
+                    <tr key={`fed-org-${org.id}-${idx}`} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-all">
                       <td className="p-3.5 font-mono font-bold text-blue-600 dark:text-blue-400">
                         {org.code}
                       </td>

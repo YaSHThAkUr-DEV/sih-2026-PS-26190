@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentSession } from '@/lib/auth/jwt';
 import { query } from '@/lib/db';
 import { logAuditEvent } from '@/lib/auth/audit';
+import { canViewInterOrg, canRequestInterOrg } from '@/lib/auth/rbac';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,10 @@ export async function GET(req: NextRequest) {
     const session = await getCurrentSession(req);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
+    }
+
+    if (!canViewInterOrg(session)) {
+      return NextResponse.json({ error: 'Forbidden: Inter-agency collaboration view clearance required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -142,7 +147,22 @@ export async function GET(req: NextRequest) {
       LEFT JOIN taxonomy_priority_tiers pt ON req.priority_tier_id = pt.id
       LEFT JOIN documents doc ON req.target_document_id = doc.id
       LEFT JOIN security_levels sl ON doc.security_level_id = sl.id
-      LEFT JOIN inter_org_shares shr ON req.id = shr.request_id AND shr.is_revoked = false
+      LEFT JOIN LATERAL (
+        SELECT 
+          s.id,
+          s.share_number,
+          s.is_watermarked,
+          s.view_count,
+          s.download_count,
+          s.expires_at,
+          s.is_revoked,
+          s.blockchain_tx_hash,
+          s.access_mode_id
+        FROM inter_org_shares s
+        WHERE s.request_id = req.id AND s.is_revoked = false
+        ORDER BY s.created_at DESC
+        LIMIT 1
+      ) shr ON true
       LEFT JOIN taxonomy_access_modes am ON shr.access_mode_id = am.id
       ${whereSql}
       ORDER BY 
@@ -193,6 +213,10 @@ export async function POST(req: NextRequest) {
     const session = await getCurrentSession(req);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
+    }
+
+    if (!canRequestInterOrg(session)) {
+      return NextResponse.json({ error: 'Forbidden: Inter-agency document requisition permission required' }, { status: 403 });
     }
 
     const body = await req.json();

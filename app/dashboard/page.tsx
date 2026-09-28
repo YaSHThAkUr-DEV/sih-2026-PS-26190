@@ -255,10 +255,15 @@ export default function DashboardPage() {
       viewBlockchain: has('BLOCKCHAIN_VIEW', 'AUDIT_VIEW', 'PERMISSION_MANAGE', 'DOCUMENT_VIEW'),
       viewJobs:       has('DOCUMENT_CREATE', 'PERMISSION_MANAGE'),   // officers + admins
       // Sovereign Federation
-      viewCollaboration: has('DOCUMENT_VIEW', 'PERMISSION_MANAGE'),
-      viewFedAudit:      has('AUDIT_VIEW', 'PERMISSION_MANAGE'),
-      viewFedAdmin:      isSuperAdmin,
-      viewOrganizations: has('PERMISSION_MANAGE', 'USER_MANAGE', 'DEPARTMENT_MANAGE') || isSuperAdmin,
+      viewCollaboration: has('INTER_ORG_VIEW', 'INTER_ORG_DISPATCH', 'INTER_ORG_REQUEST', 'INTER_ORG_RESPOND', 'DOCUMENT_VIEW', 'PERMISSION_MANAGE'),
+      dispatchCollaboration: has('INTER_ORG_DISPATCH', 'DOCUMENT_MANAGE', 'PERMISSION_MANAGE'),
+      requestCollaboration: has('INTER_ORG_REQUEST', 'DOCUMENT_CREATE', 'PERMISSION_MANAGE'),
+      respondCollaboration: has('INTER_ORG_RESPOND', 'DOCUMENT_APPROVE', 'PERMISSION_MANAGE'),
+      viewFedAudit:      has('INTER_ORG_AUDIT_VIEW', 'AUDIT_VIEW', 'PERMISSION_MANAGE'),
+      exportFedAudit:    has('INTER_ORG_AUDIT_EXPORT', 'AUDIT_EXPORT', 'PERMISSION_MANAGE'),
+      viewFedAdmin:      has('FEDERATION_MANAGE', 'PERMISSION_MANAGE') || isSuperAdmin,
+      viewOrganizations: has('FEDERATION_VIEW', 'FEDERATION_MANAGE', 'PERMISSION_MANAGE', 'USER_MANAGE', 'DEPARTMENT_MANAGE') || isSuperAdmin,
+      manageOrganizations: has('FEDERATION_MANAGE', 'PERMISSION_MANAGE') || isSuperAdmin,
       // Administration
       viewSystemSettings: has('PERMISSION_MANAGE'),
     };
@@ -270,6 +275,7 @@ export default function DashboardPage() {
     if (!features.feature_deep_ocr && activeView === 'ocr') setActiveView('overview');
     if (!features.feature_retention_holds && activeView === 'retention') setActiveView('overview');
     if (!features.feature_blockchain && activeView === 'blockchain') setActiveView('overview');
+    if (!features.feature_inter_org_collaboration && (activeView === 'collaboration' || activeView === 'fed-audit' || activeView === 'organizations')) setActiveView('overview');
     // Permission-based fallbacks
     if (!canDo.viewDocuments && activeView === 'documents') setActiveView('overview');
     if (!canDo.uploadDocument && activeView === 'upload') setActiveView('overview');
@@ -280,6 +286,9 @@ export default function DashboardPage() {
     if (!canDo.viewRetention && activeView === 'retention') setActiveView('overview');
     if (!canDo.viewAudit && activeView === 'audit') setActiveView('overview');
     if (!canDo.viewBlockchain && activeView === 'blockchain') setActiveView('overview');
+    if (!canDo.viewCollaboration && activeView === 'collaboration') setActiveView('overview');
+    if (!canDo.viewFedAudit && activeView === 'fed-audit') setActiveView('overview');
+    if (!canDo.viewOrganizations && (activeView === 'organizations' || activeView === 'fed-admin')) setActiveView('overview');
     if (!canDo.viewSystemSettings && activeView === 'admin') setActiveView('overview');
   }, [features, canDo, activeView]);
 
@@ -1343,8 +1352,9 @@ export default function DashboardPage() {
           {/* 11. INTER-AGENCY COLLABORATION HIGHWAY */}
           {activeView === 'collaboration' && (
             <InterOrgExchangeView
-              currentUserId={user?.id}
+              currentUserId={user?.id || ''}
               currentUserRoles={user?.roles}
+              currentUserPermissions={user?.permissions}
               currentUserClearance={user?.maxSecurityLevel || 3}
               currentOrg={user?.organization}
             />
@@ -1355,6 +1365,7 @@ export default function DashboardPage() {
             <FederationAuditView
               currentUserId={user?.id}
               currentUserRoles={user?.roles}
+              currentUserPermissions={user?.permissions}
               currentUserClearance={user?.maxSecurityLevel || 5}
               currentOrg={user?.organization}
             />
@@ -1365,6 +1376,7 @@ export default function DashboardPage() {
             <OrganizationsManagementView
               currentUserId={user?.id}
               currentUserRoles={user?.roles}
+              currentUserPermissions={user?.permissions}
               currentOrg={user?.organization}
               onNavigateTab={(tab) => setActiveView(tab as any)}
             />

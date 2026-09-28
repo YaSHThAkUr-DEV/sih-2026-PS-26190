@@ -158,10 +158,15 @@ export default function Auditor360View({
         setTotalPages(data.totalPages || 1);
 
         // Auto-select first event if none selected
-        if (!selectedEventId && data.events?.length > 0) {
-          const first = data.events[0];
-          setSelectedEventId(first.id);
-          loadOfficerDossier(first.actor.id, first.actor);
+        if (data.events?.length > 0) {
+          setSelectedEventId((prev) => {
+            if (!prev) {
+              const first = data.events[0];
+              loadOfficerDossier(first.actor.id, first.actor);
+              return first.id;
+            }
+            return prev;
+          });
         }
       }
     } catch (e) {
@@ -169,7 +174,7 @@ export default function Auditor360View({
     } finally {
       setLoading(false);
     }
-  }, [page, searchQuery, departmentFilter, eventFilter, riskFilter, selectedEventId]);
+  }, [page, searchQuery, departmentFilter, eventFilter, riskFilter]);
 
   // 3. Fetch Officer Dossier
   const loadOfficerDossier = async (actorId: string | null, fallbackActor: any) => {
@@ -475,13 +480,18 @@ export default function Auditor360View({
                   }}
                   className="bg-transparent font-medium text-[#10141A] outline-none cursor-pointer"
                 >
-                  <option value="all">All Events</option>
-                  <option value="FILE_UPLOAD">FILE_UPLOAD</option>
-                  <option value="DEK_UNWRAP">DEK_UNWRAP_STREAM</option>
-                  <option value="VERSION">VERSION_PROMOTION</option>
-                  <option value="CERT">SECTION_65B_CERT</option>
-                  <option value="AUTH">LOGIN / AUTH</option>
-                  <option value="APPROV">APPROVAL_ADJUDICATED</option>
+                  <option value="all">All Events (All Categories)</option>
+                  <option value="FILE_UPLOAD">FILE_UPLOAD (Ingestion & Vault)</option>
+                  <option value="DEK_UNWRAP">DEK_UNWRAP_STREAM (Decryption & Access)</option>
+                  <option value="INTER_ORG">INTER_ORG_EXCHANGE (Cross-Agency Highway)</option>
+                  <option value="BLOCKCHAIN">BLOCKCHAIN_ANCHOR (Immutable Ledger)</option>
+                  <option value="OCR">OCR_INTELLIGENCE (Deep OCR & Index)</option>
+                  <option value="VERSION">VERSION_PROMOTION (DMS Versions)</option>
+                  <option value="CERT">SECTION_65B_CERT (Judicial Certificates)</option>
+                  <option value="APPROV">APPROVAL_ADJUDICATED (Dual-Control)</option>
+                  <option value="RETENTION">RETENTION_HOLD (WORM Compliance)</option>
+                  <option value="AUTH">LOGIN / AUTH (Identity & Sessions)</option>
+                  <option value="ADMIN">ADMIN_GOVERNANCE (Policy & Security)</option>
                 </select>
               </div>
             </div>
@@ -607,18 +617,30 @@ export default function Auditor360View({
                           </td>
 
                           <td className="py-3 px-4 whitespace-nowrap">
-                            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full uppercase ${
+                            <span className={`text-[10px] font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                               ev.eventClass === 'FILE_UPLOAD'
-                                ? 'bg-blue-50 text-blue-700 border border-blue-200/50'
+                                ? 'bg-blue-50 text-blue-700 border border-blue-200/60'
                                 : ev.eventClass === 'DEK_UNWRAP_STREAM'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200/50'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200/60'
+                                : ev.eventClass === 'INTER_ORG_EXCHANGE'
+                                ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60'
+                                : ev.eventClass === 'BLOCKCHAIN_ANCHOR'
+                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200/60'
+                                : ev.eventClass === 'OCR_INTELLIGENCE'
+                                ? 'bg-cyan-50 text-cyan-700 border border-cyan-200/60'
                                 : ev.eventClass === 'VERSION_PROMOTION'
-                                ? 'bg-purple-50 text-purple-700 border border-purple-200/50'
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200/60'
                                 : ev.eventClass === 'SECTION_65B_CERT'
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/50'
+                                ? 'bg-teal-50 text-teal-700 border border-teal-200/60'
+                                : ev.eventClass === 'APPROVAL_ADJUDICATED'
+                                ? 'bg-green-50 text-green-700 border border-green-200/60'
+                                : ev.eventClass === 'RETENTION_HOLD'
+                                ? 'bg-orange-50 text-orange-700 border border-orange-200/60'
+                                : ev.eventClass === 'AUTH_SESSION'
+                                ? 'bg-sky-50 text-sky-700 border border-sky-200/60'
                                 : ev.isFlagged
-                                ? 'bg-rose-50 text-rose-700 border border-rose-200/50'
-                                : 'bg-slate-100 text-slate-700'
+                                ? 'bg-rose-50 text-rose-700 border border-rose-200/60'
+                                : 'bg-slate-100 text-slate-700 border border-slate-200'
                             }`}>
                               {ev.eventClass}
                             </span>

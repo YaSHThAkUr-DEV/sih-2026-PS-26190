@@ -58,15 +58,39 @@ export async function GET(req: NextRequest) {
 
     // Event Type Filter
     if (eventType && eventType !== 'all') {
-      params.push(`%${eventType}%`);
-      sql += ` AND ae.event_type ILIKE $${params.length}`;
+      if (eventType === 'FILE_UPLOAD') {
+        sql += ` AND (ae.event_type LIKE '%UPLOAD%' OR ae.event_type LIKE '%FILE%')`;
+      } else if (eventType === 'DEK_UNWRAP') {
+        sql += ` AND (ae.event_type LIKE '%DEK%' OR ae.event_type LIKE '%DOWNLOAD%' OR ae.event_type LIKE '%READ%' OR ae.event_type LIKE '%VIEW%')`;
+      } else if (eventType === 'INTER_ORG') {
+        sql += ` AND (ae.event_type LIKE '%INTER_ORG%' OR ae.event_type LIKE '%FEDERAT%' OR ae.event_type LIKE '%DISPATCH%' OR ae.event_type LIKE '%SHARE%' OR ae.event_type LIKE '%REQUISITION%')`;
+      } else if (eventType === 'BLOCKCHAIN') {
+        sql += ` AND (ae.event_type LIKE '%BLOCKCHAIN%' OR ae.event_type LIKE '%ATTEST%' OR ae.event_type LIKE '%LEDGER%')`;
+      } else if (eventType === 'OCR') {
+        sql += ` AND (ae.event_type LIKE '%OCR%' OR ae.event_type LIKE '%INDEX%')`;
+      } else if (eventType === 'VERSION') {
+        sql += ` AND (ae.event_type LIKE '%VERSION%' OR ae.event_type LIKE '%PROMOT%')`;
+      } else if (eventType === 'CERT') {
+        sql += ` AND (ae.event_type LIKE '%CERT%')`;
+      } else if (eventType === 'AUTH') {
+        sql += ` AND (ae.event_type LIKE '%LOGIN%' OR ae.event_type LIKE '%LOGOUT%' OR ae.event_type LIKE '%AUTH%' OR ae.event_type LIKE '%SESSION%')`;
+      } else if (eventType === 'APPROV') {
+        sql += ` AND (ae.event_type LIKE '%APPROV%' OR ae.event_type LIKE '%REJECT%' OR ae.event_type LIKE '%ADJUDICAT%')`;
+      } else if (eventType === 'RETENTION') {
+        sql += ` AND (ae.event_type LIKE '%RETENTION%' OR ae.event_type LIKE '%HOLD%' OR ae.event_type LIKE '%DELETE%' OR ae.event_type LIKE '%DISPOSAL%' OR ae.event_type LIKE '%SHRED%')`;
+      } else if (eventType === 'ADMIN') {
+        sql += ` AND (ae.event_type LIKE '%USER%' OR ae.event_type LIKE '%ROLE%' OR ae.event_type LIKE '%POLICY%' OR ae.event_type LIKE '%DEPT%' OR ae.event_type LIKE '%ORG%')`;
+      } else {
+        params.push(`%${eventType}%`);
+        sql += ` AND ae.event_type ILIKE $${params.length}`;
+      }
     }
 
     // Risk Filter
     if (riskLevel === 'FLAGGED') {
-      sql += ` AND (ae.result = 'FAILURE' OR ae.event_type LIKE '%FAIL%' OR ae.event_type LIKE '%REJECT%')`;
+      sql += ` AND (ae.result = 'FAILURE' OR ae.result = 'DENIED' OR ae.event_type LIKE '%FAIL%' OR ae.event_type LIKE '%REJECT%')`;
     } else if (riskLevel === 'MEDIUM') {
-      sql += ` AND (ae.event_type LIKE '%DEK%' OR ae.event_type LIKE '%DOWNLOAD%' OR ae.event_type LIKE '%VERIFY%')`;
+      sql += ` AND (ae.event_type LIKE '%DEK%' OR ae.event_type LIKE '%DOWNLOAD%' OR ae.event_type LIKE '%VERIFY%' OR ae.event_type LIKE '%SHARE%')`;
     } else if (riskLevel === 'LOW') {
       sql += ` AND (ae.result = 'SUCCESS' AND ae.event_type NOT LIKE '%FAIL%')`;
     }
@@ -100,12 +124,45 @@ export async function GET(req: NextRequest) {
     // Format events for Stitch UI specification
     const events = rows.map((r) => {
       // Determine normalized event class
+      const et = (r.event_type || '').toUpperCase();
       let eventClass = r.event_type;
-      if (r.event_type.includes('UPLOAD')) eventClass = 'FILE_UPLOAD';
-      else if (r.event_type.includes('DOWNLOAD') || r.event_type.includes('DEK') || r.event_type.includes('KEY')) eventClass = 'DEK_UNWRAP_STREAM';
-      else if (r.event_type.includes('VERSION') || r.event_type.includes('PROMOT')) eventClass = 'VERSION_PROMOTION';
-      else if (r.event_type.includes('CERT')) eventClass = 'SECTION_65B_CERT';
-      else if (r.result === 'FAILURE' || r.event_type.includes('FAIL')) eventClass = 'FAILED_AUTH';
+      if (et.includes('UPLOAD')) eventClass = 'FILE_UPLOAD';
+      else if (et.includes('DOWNLOAD') || et.includes('DEK') || et.includes('KEY')) eventClass = 'DEK_UNWRAP_STREAM';
+      else if (et.includes('INTER_ORG') || et.includes('FEDERAT') || et.includes('DISPATCH') || et.includes('REQUISITION') || et.includes('SHARE')) eventClass = 'INTER_ORG_EXCHANGE';
+      else if (et.includes('BLOCKCHAIN') || et.includes('ATTEST') || et.includes('LEDGER')) eventClass = 'BLOCKCHAIN_ANCHOR';
+      else if (et.includes('OCR') || et.includes('INDEX')) eventClass = 'OCR_INTELLIGENCE';
+      else if (et.includes('VERSION') || et.includes('PROMOT')) eventClass = 'VERSION_PROMOTION';
+      else if (et.includes('CERT')) eventClass = 'SECTION_65B_CERT';
+      else if (et.includes('APPROV') || et.includes('ADJUDICAT')) eventClass = 'APPROVAL_ADJUDICATED';
+      else if (et.includes('RETENTION') || et.includes('HOLD') || et.includes('DELETE') || et.includes('DISPOSAL')) eventClass = 'RETENTION_HOLD';
+      else if (et.includes('LOGIN') || et.includes('LOGOUT') || et.includes('AUTH') || et.includes('SESSION')) eventClass = 'AUTH_SESSION';
+      else if (r.result === 'FAILURE' || r.result === 'DENIED' || et.includes('FAIL') || et.includes('REJECT')) eventClass = 'FAILED_AUTH';
+
+      let targetDocket = r.document_number;
+      let targetTitle = r.document_title || r.file_name;
+
+      if (!targetDocket) {
+        if (eventClass === 'INTER_ORG_EXCHANGE') {
+          targetDocket = r.event_metadata?.shareNumber || r.event_metadata?.requestNumber || 'INTER-ORG-HUB';
+          targetTitle = r.event_metadata?.targetOrg
+            ? `Dispatch to ${r.event_metadata.targetOrg}`
+            : r.event_metadata?.sourceOrg
+            ? `Inbound from ${r.event_metadata.sourceOrg}`
+            : 'Cross-Agency Document Requisition';
+        } else if (eventClass === 'BLOCKCHAIN_ANCHOR') {
+          targetDocket = r.event_metadata?.blockNumber ? `BLK-#${r.event_metadata.blockNumber}` : 'BLOCKCHAIN-LEDGER';
+          targetTitle = r.event_metadata?.merkleRoot ? `Merkle Root: ${r.event_metadata.merkleRoot.substring(0, 14)}...` : 'Immutable State Ledger Attestation';
+        } else if (eventClass === 'OCR_INTELLIGENCE') {
+          targetDocket = 'OCR-PIPELINE';
+          targetTitle = 'Deep OCR Vector & Text Indexing';
+        } else if (eventClass === 'AUTH_SESSION') {
+          targetDocket = r.actor_badge ? `AUTH-${r.actor_badge}` : 'IAM-SESSION';
+          targetTitle = r.event_type.replace(/_/g, ' ');
+        } else {
+          targetDocket = 'SYSTEM_CORE';
+          targetTitle = r.event_type.replace(/_/g, ' ');
+        }
+      }
 
       return {
         id: r.id,
@@ -130,13 +187,13 @@ export async function GET(req: NextRequest) {
         },
         eventClass,
         eventType: r.event_type,
-        targetDocket: r.document_number || 'SYSTEM_CORE',
-        targetTitle: r.document_title || r.file_name || 'Central Service Bus Event',
+        targetDocket: targetDocket || 'SYSTEM_CORE',
+        targetTitle: targetTitle || 'Central Service Bus Event',
         targetFile: r.file_name || 'System Metadata',
         ipAddress: r.ip_address || '127.0.0.1',
         node: 'TLS 1.3 // SEC-GW-01',
         result: r.result || 'SUCCESS',
-        isFlagged: r.result === 'FAILURE' || eventClass === 'FAILED_AUTH',
+        isFlagged: r.result === 'FAILURE' || r.result === 'DENIED' || eventClass === 'FAILED_AUTH',
         eventHash: r.event_hash || 'sha256:0000000000000000000000000000000000000000000000000000000000000000',
         metadata: r.event_metadata || {},
       };

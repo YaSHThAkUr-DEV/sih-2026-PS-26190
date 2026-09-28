@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentSession } from '@/lib/auth/jwt';
 import { query } from '@/lib/db';
-import { isSuperAdmin } from '@/lib/auth/rbac';
+import { isSuperAdmin, isAdmin } from '@/lib/auth/rbac';
 import { normalizeFeatures } from '@/lib/service/service-config-shared';
 
 export const dynamic = 'force-dynamic';
@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
     }
 
-    if (!isSuperAdmin(session)) {
-      return NextResponse.json({ error: 'Forbidden: Super Administrator clearance required' }, { status: 403 });
+    if (!isAdmin(session)) {
+      return NextResponse.json({ error: 'Forbidden: Administrator clearance required' }, { status: 403 });
     }
 
     // 1. Overall Fleet KPIs
@@ -83,8 +83,8 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
     }
 
-    if (!isSuperAdmin(session)) {
-      return NextResponse.json({ error: 'Forbidden: Super Administrator clearance required' }, { status: 403 });
+    if (!isAdmin(session)) {
+      return NextResponse.json({ error: 'Forbidden: Administrator clearance required' }, { status: 403 });
     }
 
     const body = await req.json();

@@ -116,7 +116,11 @@ export function UserProfileDossierModal({
     if (eventType.includes('APPROV')) return 'Approved Docket';
     if (eventType.includes('REJECT')) return 'Rejected Request';
     if (eventType.includes('DEK') || eventType.includes('DOWNLOAD') || eventType.includes('READ')) return 'Decrypted / Downloaded';
+    if (eventType.includes('INTER_ORG') || eventType.includes('FEDERAT') || eventType.includes('DISPATCH')) return 'Inter-Org Exchange';
+    if (eventType.includes('BLOCKCHAIN') || eventType.includes('ATTEST')) return 'Blockchain Ledger';
+    if (eventType.includes('OCR')) return 'OCR Indexed';
     if (eventType.includes('LOGIN') || eventType.includes('AUTH')) return 'Logged In';
+    if (eventType.includes('LOGOUT')) return 'Logged Out';
     if (eventType.includes('DELETE') || eventType.includes('SHRED')) return 'Crypto-Shred / Delete';
     return eventType.replace(/_/g, ' ');
   };
@@ -133,6 +137,12 @@ export function UserProfileDossierModal({
     }
     if (eventType.includes('DEK') || eventType.includes('DOWNLOAD')) {
       return 'bg-amber-50 text-amber-800 border-amber-200/50';
+    }
+    if (eventType.includes('INTER_ORG') || eventType.includes('FEDERAT') || eventType.includes('DISPATCH')) {
+      return 'bg-indigo-50 text-indigo-700 border-indigo-200/50';
+    }
+    if (eventType.includes('BLOCKCHAIN') || eventType.includes('ATTEST')) {
+      return 'bg-emerald-50 text-emerald-800 border-emerald-200/50';
     }
     return 'bg-[#f0f3ff] text-[#3f5e93] border-[#83A2DB]/30';
   };
@@ -261,8 +271,9 @@ export function UserProfileDossierModal({
                     {[
                       { id: 'all', label: 'All' },
                       { id: 'UPLOAD', label: 'Uploads' },
-                      { id: 'APPROV', label: 'Approvals' },
                       { id: 'DOWNLOAD', label: 'Downloads' },
+                      { id: 'INTER_ORG', label: 'Federation' },
+                      { id: 'APPROV', label: 'Approvals' },
                       { id: 'LOGIN', label: 'Logins' },
                     ].map((tab) => (
                       <button

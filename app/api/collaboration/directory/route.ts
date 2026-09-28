@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentSession } from '@/lib/auth/jwt';
 import { query } from '@/lib/db';
-import { isSuperAdmin } from '@/lib/auth/rbac';
+import { isSuperAdmin, isAdmin } from '@/lib/auth/rbac';
 import { provisionOfficeInstance } from '@/lib/service/provisioning';
 
 export const dynamic = 'force-dynamic';
@@ -147,8 +147,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
     }
 
-    if (!isSuperAdmin(session)) {
-      return NextResponse.json({ error: 'Forbidden: Super Administrator clearance required for organization onboarding' }, { status: 403 });
+    if (!isAdmin(session)) {
+      return NextResponse.json({ error: 'Forbidden: Administrator clearance required for organization onboarding' }, { status: 403 });
     }
 
     const body = await req.json();
