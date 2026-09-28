@@ -36,7 +36,8 @@ export const UiverseSearchBar = forwardRef<HTMLInputElement, UiverseSearchBarPro
       }
     };
 
-    const hasValue = Boolean(value && String(value).length > 0);
+    const currentValue = value ?? '';
+    const hasValue = String(currentValue).length > 0;
 
     return (
       <div className={`uiverse-search-group ${containerClassName}`}>
@@ -50,13 +51,13 @@ export const UiverseSearchBar = forwardRef<HTMLInputElement, UiverseSearchBarPro
         <input
           ref={ref}
           type="text"
-          value={value}
-          onChange={onChange}
-          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className={`uiverse-search-input ${compact ? 'compact' : ''} ${className}`}
           {...props}
+          value={currentValue}
+          onChange={onChange}
+          onKeyDown={handleKeyDown}
+          className={`uiverse-search-input ${compact ? 'compact' : ''} ${className}`}
         />
 
         {hasValue && onClear && !disabled && (
