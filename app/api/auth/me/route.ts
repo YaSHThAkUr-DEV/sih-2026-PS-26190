@@ -17,7 +17,7 @@ export async function GET() {
 
   // Refresh latest status & details from DB
   const users = await query(
-    `SELECT u.id, u.username, u.full_name, u.email, u.employee_code, u.designation, u.status, u.last_login_at,
+    `SELECT u.id, u.username, u.full_name, u.email, u.employee_code, u.designation, u.status, u.last_login_at, u.avatar_url,
             o.name as organization_name, o.code as organization_code,
             d.name as department_name, d.code as department_code
      FROM users u
@@ -46,6 +46,7 @@ export async function GET() {
       email: u.email,
       employeeCode: u.employee_code,
       designation: u.designation,
+      avatarUrl: u.avatar_url || null,
       organization: {
         id: session.organizationId,
         code: u.organization_code,

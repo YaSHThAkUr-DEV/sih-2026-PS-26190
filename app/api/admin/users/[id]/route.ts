@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/auth/admin-guard';
 import { query } from '@/lib/db';
 import { logAuditEvent } from '@/lib/auth/audit';
+import { ensureUserPhotoSchema } from '@/lib/users/schema';
 import bcrypt from 'bcryptjs';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await ensureUserPhotoSchema();
   const auth = await verifyAdminSession(req);
   if (auth.errorResponse) return auth.errorResponse;
   const session = auth.session;
@@ -24,6 +26,8 @@ export async function GET(
          u.designation,
          u.employee_code,
          u.status,
+         u.avatar_url,
+         u.face_biometrics_enrolled,
          u.max_security_level,
          u.department_id,
          d.name as department_name,
@@ -97,6 +101,8 @@ export async function PATCH(
       roleIds,
       password,
       maxSecurityLevel,
+      avatarUrl,
+      avatar_url,
     } = body;
 
     // Fetch existing user to verify existence & current roles
@@ -164,6 +170,16 @@ export async function PATCH(
     // Update user columns
     const setClauses: string[] = ['updated_at = NOW()'];
     const queryParams: any[] = [targetUserId, session.organizationId];
+
+    const targetAvatar = avatarUrl !== undefined ? avatarUrl : avatar_url;
+    if (targetAvatar !== undefined) {
+      if (targetAvatar && typeof targetAvatar === 'string' && targetAvatar.trim().length > 0) {
+        queryParams.push(targetAvatar.trim());
+        setClauses.push(`avatar_url = $${queryParams.length}`);
+      } else {
+        setClauses.push(`avatar_url = NULL, face_biometrics_enrolled = FALSE, face_descriptor = NULL`);
+      }
+    }
 
     if (fullName !== undefined) {
       queryParams.push(fullName);

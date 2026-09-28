@@ -101,6 +101,8 @@ export async function GET(
         u.employee_code as "employeeCode",
         u.designation,
         u.status,
+        u.avatar_url as "avatarUrl",
+        u.face_biometrics_enrolled as "faceBiometricsEnrolled",
         u.max_security_level as "maxSecurityLevel",
         u.last_login_at as "lastLoginAt",
         u.created_at as "createdAt",

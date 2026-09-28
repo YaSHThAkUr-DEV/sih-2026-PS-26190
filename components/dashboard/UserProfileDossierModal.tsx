@@ -19,6 +19,7 @@ interface UserProfileData {
     department: string;
     departmentCode: string;
     status: string;
+    avatarUrl?: string | null;
     roles: string[];
     createdAt: string;
     lastLoginAt: string | null;
@@ -158,12 +159,31 @@ export function UserProfileDossierModal({
         
         {/* Header */}
         <div className="px-6 py-4 border-b border-[#D8DEEA]/60 flex items-center justify-between shrink-0 bg-white">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-[#000000] text-white flex items-center justify-center font-bold text-sm">
-              {initials}
+          <div className="flex items-center gap-3.5">
+            <div className="relative w-12 h-12 rounded-full shrink-0">
+              {data?.profile?.avatarUrl ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={data.profile.avatarUrl}
+                  alt={data.profile.fullName}
+                  className="w-12 h-12 rounded-full object-cover border-2 border-[#D8DEEA] shadow-sm"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-full bg-[#000000] text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                  {initials}
+                </div>
+              )}
+              {data?.profile?.avatarUrl && (
+                <span
+                  className="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white"
+                  title="AI Face Biometrics Enrolled & Verified"
+                >
+                  <span className="material-symbols-outlined text-[10px] font-bold">check</span>
+                </span>
+              )}
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-base font-bold text-[#151c27]">
                   {data?.profile?.fullName || 'User Activity'}
                 </h2>
@@ -179,6 +199,12 @@ export function UserProfileDossierModal({
                       : 'bg-rose-100 text-rose-800'
                   }`}>
                     {data.profile.status}
+                  </span>
+                )}
+                {data?.profile?.avatarUrl && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-[#3f5e93] bg-[rgba(131,162,219,0.12)] border border-[#83A2DB]/30 px-2 py-0.5 rounded-full font-mono">
+                    <span className="material-symbols-outlined text-[12px]">face</span>
+                    <span>Face Biometrics Ready</span>
                   </span>
                 )}
               </div>

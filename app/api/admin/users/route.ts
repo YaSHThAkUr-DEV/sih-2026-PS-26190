@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyAdminSession } from '@/lib/auth/admin-guard';
 import { query } from '@/lib/db';
 import { logAuditEvent } from '@/lib/auth/audit';
+import { ensureUserPhotoSchema } from '@/lib/users/schema';
 import bcrypt from 'bcryptjs';
 
 export async function GET(req: NextRequest) {
+  await ensureUserPhotoSchema();
   const auth = await verifyAdminSession(req);
   if (auth.errorResponse) return auth.errorResponse;
   const session = auth.session;
@@ -47,6 +49,8 @@ export async function GET(req: NextRequest) {
          u.designation,
          u.employee_code,
          u.status,
+         u.avatar_url,
+         u.face_biometrics_enrolled,
          u.max_security_level,
          u.department_id,
          d.name as department_name,
@@ -103,7 +107,11 @@ export async function POST(req: NextRequest) {
       roleIds,
       maxSecurityLevel = 3,
       status = 'ACTIVE',
+      avatarUrl,
+      avatar_url,
     } = body;
+
+    const userAvatar = avatarUrl || avatar_url || null;
 
     if (!username || !fullName || !email || !password) {
       return NextResponse.json(
@@ -139,10 +147,10 @@ export async function POST(req: NextRequest) {
     const newUser = await query<{ id: string }>(
       `INSERT INTO users (
          organization_id, department_id, team_id, employee_code,
-         username, full_name, email, phone, designation,
+         username, full_name, email, phone, designation, avatar_url,
          password_hash, max_security_level, status, created_at, updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
        RETURNING id;`,
       [
         session.organizationId,
@@ -154,6 +162,7 @@ export async function POST(req: NextRequest) {
         email,
         phone || null,
         designation || null,
+        userAvatar,
         passwordHash,
         Math.min(5, Math.max(1, Number(maxSecurityLevel) || 3)),
         status,

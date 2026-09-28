@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
+import { UserPhotoUpload } from '@/components/ui/UserPhotoUpload';
 
 interface UserRecord {
   id: string;
@@ -12,6 +13,8 @@ interface UserRecord {
   designation?: string | null;
   employee_code?: string | null;
   status: 'ACTIVE' | 'SUSPENDED' | 'DISABLED';
+  avatar_url?: string | null;
+  face_biometrics_enrolled?: boolean;
   max_security_level?: number;
   department_id?: string | null;
   department_name?: string | null;
@@ -92,6 +95,7 @@ export default function UsersManagementView({
     maxSecurityLevel: 3,
     roleIds: [] as string[],
     status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'DISABLED',
+    avatarUrl: null as string | null,
   });
 
   const showToast = (text: string, type: 'success' | 'error' = 'success') => {
@@ -185,6 +189,7 @@ export default function UsersManagementView({
           maxSecurityLevel: Number(userForm.maxSecurityLevel) || 3,
           roleIds: userForm.roleIds,
           status: 'ACTIVE',
+          avatarUrl: userForm.avatarUrl || null,
         }),
       });
 
@@ -217,6 +222,7 @@ export default function UsersManagementView({
       maxSecurityLevel: u.max_security_level ?? 3,
       roleIds: (u.roles || []).map((r) => r.id),
       status: u.status,
+      avatarUrl: u.avatar_url || null,
     });
     setEditModalOpen(true);
   };
@@ -237,6 +243,7 @@ export default function UsersManagementView({
         maxSecurityLevel: Number(userForm.maxSecurityLevel) || 3,
         roleIds: userForm.roleIds,
         status: userForm.status,
+        avatarUrl: userForm.avatarUrl,
       };
       if (userForm.password && userForm.password.length >= 6) {
         payload.password = userForm.password;
@@ -303,6 +310,7 @@ export default function UsersManagementView({
       maxSecurityLevel: 3,
       roleIds: [],
       status: 'ACTIVE',
+      avatarUrl: null,
     });
   };
 
@@ -551,8 +559,27 @@ export default function UsersManagementView({
                           <tr key={u.id} className="hover:bg-[#f0f3ff]/40 transition">
                             <td className="py-3.5 px-4">
                               <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-[#10141A] text-white flex items-center justify-center font-bold text-xs shrink-0">
-                                  {initials}
+                                <div className="relative w-9 h-9 rounded-full shrink-0">
+                                  {u.avatar_url ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                      src={u.avatar_url}
+                                      alt={u.full_name}
+                                      className="w-9 h-9 rounded-full object-cover border border-[#D8DEEA] shadow-2xs"
+                                    />
+                                  ) : (
+                                    <div className="w-9 h-9 rounded-full bg-[#10141A] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                                      {initials}
+                                    </div>
+                                  )}
+                                  {u.avatar_url && (
+                                    <span
+                                      className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white"
+                                      title="AI Face Recognition Enrolled"
+                                    >
+                                      <span className="material-symbols-outlined text-[9px] font-bold">check</span>
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex flex-col min-w-0">
                                   <span className="font-semibold text-[#10141A] truncate">{u.full_name}</span>
@@ -712,7 +739,16 @@ export default function UsersManagementView({
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleCreateSubmit} className="space-y-3.5 text-xs">
+              {/* Photo Upload for AI Face Biometrics */}
+              <UserPhotoUpload
+                value={userForm.avatarUrl}
+                onChange={(photo) => setUserForm({ ...userForm, avatarUrl: photo })}
+                name={userForm.fullName}
+                label="Officer Photo & Face Enrollment"
+                helperText="Upload official photograph. Will be used for identification and AI face recognition enrollment."
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[#10141A] font-medium mb-1">Full Name *</label>
@@ -880,7 +916,16 @@ export default function UsersManagementView({
               </button>
             </div>
 
-            <form onSubmit={handleEditSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleEditSubmit} className="space-y-3.5 text-xs">
+              {/* Photo Edit / Upload for AI Face Biometrics */}
+              <UserPhotoUpload
+                value={userForm.avatarUrl}
+                onChange={(photo) => setUserForm({ ...userForm, avatarUrl: photo })}
+                name={userForm.fullName}
+                label="Officer Photo & Face Biometrics"
+                helperText="Update portrait photograph. Will be synchronized with AI face recognition registry."
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[#10141A] font-medium mb-1">Full Name *</label>

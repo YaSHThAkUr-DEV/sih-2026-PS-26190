@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ServiceSetupModal } from './ServiceSetupModal';
+import { UserPhotoUpload } from '@/components/ui/UserPhotoUpload';
 import {
   OrganizationFeatureConfig,
   DEFAULT_FULL_FEATURES,
@@ -24,6 +25,8 @@ interface UserItem {
   designation?: string | null;
   employee_code?: string | null;
   status: 'ACTIVE' | 'SUSPENDED' | 'DISABLED' | 'INVITED';
+  avatar_url?: string | null;
+  face_biometrics_enrolled?: boolean;
   department_id?: string | null;
   department_name?: string | null;
   department_code?: string | null;
@@ -223,6 +226,7 @@ export default function AdministrationView({
     teamId: '',
     password: '',
     roleIds: [] as string[],
+    avatarUrl: null as string | null,
   });
 
   const [editUserForm, setEditUserForm] = useState({
@@ -236,6 +240,7 @@ export default function AdministrationView({
     status: 'ACTIVE' as 'ACTIVE' | 'SUSPENDED' | 'DISABLED',
     password: '',
     roleIds: [] as string[],
+    avatarUrl: null as string | null,
   });
 
   const [editingDocTypeId, setEditingDocTypeId] = useState<string | null>(null);
@@ -807,6 +812,7 @@ export default function AdministrationView({
         teamId: '',
         password: '',
         roleIds: [],
+        avatarUrl: null,
       });
       loadAllData();
     } catch (err: any) {
@@ -827,6 +833,7 @@ export default function AdministrationView({
       status: user.status === 'INVITED' ? 'ACTIVE' : user.status,
       password: '',
       roleIds: user.roles.map((r) => r.id),
+      avatarUrl: user.avatar_url || null,
     });
   };
 
@@ -844,6 +851,7 @@ export default function AdministrationView({
         teamId: editUserForm.teamId || null,
         status: editUserForm.status,
         roleIds: editUserForm.roleIds,
+        avatarUrl: editUserForm.avatarUrl,
       };
       if (editUserForm.password && editUserForm.password.trim().length >= 6) {
         payload.password = editUserForm.password.trim();
@@ -1115,12 +1123,46 @@ export default function AdministrationView({
                         <td colSpan={6} className="py-10 text-center text-[#6B7280]">No users found</td>
                       </tr>
                     ) : (
-                      filteredUsers.map((u) => (
-                        <tr key={u.id} className="hover:bg-[#f0f3ff]/40 transition">
-                          <td className="py-3 px-4">
-                            <div className="font-semibold text-[#10141A]">{u.full_name}</div>
-                            <div className="text-[11px] text-[#6B7280] font-mono">{u.email}</div>
-                          </td>
+                      filteredUsers.map((u) => {
+                        const initials = (u.full_name || 'U')
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)
+                          .toUpperCase();
+
+                        return (
+                          <tr key={u.id} className="hover:bg-[#f0f3ff]/40 transition">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center gap-2.5">
+                                <div className="relative w-8 h-8 rounded-full shrink-0">
+                                  {u.avatar_url ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img
+                                      src={u.avatar_url}
+                                      alt={u.full_name}
+                                      className="w-8 h-8 rounded-full object-cover border border-[#D8DEEA] shadow-2xs"
+                                    />
+                                  ) : (
+                                    <div className="w-8 h-8 rounded-full bg-[#10141A] text-white flex items-center justify-center font-bold text-[11px] shadow-2xs">
+                                      {initials}
+                                    </div>
+                                  )}
+                                  {u.avatar_url && (
+                                    <span
+                                      className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white"
+                                      title="AI Face Recognition Enrolled"
+                                    >
+                                      <span className="material-symbols-outlined text-[8px] font-bold">check</span>
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <div className="font-semibold text-[#10141A] truncate">{u.full_name}</div>
+                                  <div className="text-[11px] text-[#6B7280] font-mono truncate">{u.email}</div>
+                                </div>
+                              </div>
+                            </td>
                           <td className="py-3 px-3">
                             <div className="font-medium text-[#10141A]">{u.department_name || 'Unassigned'}</div>
                             <div className="text-[10px] text-[#6B7280]">{u.designation || 'Staff'}</div>
@@ -1153,8 +1195,8 @@ export default function AdministrationView({
                             </button>
                           </td>
                         </tr>
-                      ))
-                    )}
+                      );
+                    }))}
                   </tbody>
                 </table>
               </div>
@@ -2114,7 +2156,7 @@ export default function AdministrationView({
       {/* Enroll User Modal */}
       {enrollModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-[26px] max-w-lg w-full p-6 shadow-[0_24px_60px_rgba(16,20,26,0.18)] border border-[#D8DEEA]/80 flex flex-col gap-4">
+          <div className="bg-white rounded-[26px] max-w-lg w-full p-6 shadow-[0_24px_60px_rgba(16,20,26,0.18)] border border-[#D8DEEA]/80 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#D8DEEA]/60 pb-3">
               <h3 className="text-sm font-semibold text-[#10141A]">Enroll Officer Account</h3>
               <button onClick={() => setEnrollModalOpen(false)} className="text-[#6B7280] hover:text-[#10141A]">
@@ -2122,7 +2164,15 @@ export default function AdministrationView({
               </button>
             </div>
 
-            <form onSubmit={handleEnrollSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleEnrollSubmit} className="space-y-3.5 text-xs">
+              <UserPhotoUpload
+                value={enrollForm.avatarUrl}
+                onChange={(photo) => setEnrollForm({ ...enrollForm, avatarUrl: photo })}
+                name={enrollForm.fullName}
+                label="Officer Photo & Face Biometrics"
+                helperText="Upload official portrait. Will be used for user identification and upcoming AI Face Recognition."
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[#10141A] font-medium mb-1">Full Name *</label>
@@ -2192,7 +2242,7 @@ export default function AdministrationView({
       {/* Edit User Modal */}
       {editUserModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-[26px] max-w-lg w-full p-6 shadow-[0_24px_60px_rgba(16,20,26,0.18)] border border-[#D8DEEA]/80 flex flex-col gap-4">
+          <div className="bg-white rounded-[26px] max-w-lg w-full p-6 shadow-[0_24px_60px_rgba(16,20,26,0.18)] border border-[#D8DEEA]/80 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#D8DEEA]/60 pb-3">
               <h3 className="text-sm font-semibold text-[#10141A]">Edit User Account</h3>
               <button onClick={() => setEditUserModalUser(null)} className="text-[#6B7280] hover:text-[#10141A]">
@@ -2200,7 +2250,15 @@ export default function AdministrationView({
               </button>
             </div>
 
-            <form onSubmit={handleEditUserSubmit} className="space-y-3 text-xs">
+            <form onSubmit={handleEditUserSubmit} className="space-y-3.5 text-xs">
+              <UserPhotoUpload
+                value={editUserForm.avatarUrl}
+                onChange={(photo) => setEditUserForm({ ...editUserForm, avatarUrl: photo })}
+                name={editUserForm.fullName}
+                label="Officer Photo & Face Biometrics"
+                helperText="Update portrait photograph. Will be synchronized with AI face recognition registry."
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[#10141A] font-medium mb-1">Full Name *</label>

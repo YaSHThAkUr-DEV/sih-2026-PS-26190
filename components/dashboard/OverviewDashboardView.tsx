@@ -186,8 +186,19 @@ export default function OverviewDashboardView({
       <section className="w-full bg-white/85 backdrop-blur-xl rounded-[26px] p-6 shadow-[0_8px_32px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/80 flex flex-col xl:flex-row xl:items-center justify-between gap-6 relative overflow-hidden">
         <div className="flex flex-wrap items-center gap-4">
           {/* Profile Slot */}
-          <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-[#000000] text-white font-semibold text-sm shadow-[0_4px_14px_rgba(16,20,26,0.18)]">
-            {getInitials(user?.fullName || user?.username || 'Officer')}
+          <div className="relative flex items-center justify-center w-12 h-12 rounded-full shrink-0 shadow-[0_4px_14px_rgba(16,20,26,0.18)]">
+            {user?.avatarUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={user.avatarUrl}
+                alt={user?.fullName || 'User Photo'}
+                className="w-12 h-12 rounded-full object-cover border-2 border-white"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-[#000000] text-white font-semibold text-sm flex items-center justify-center">
+                {getInitials(user?.fullName || user?.username || 'Officer')}
+              </div>
+            )}
             <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-white flex items-center justify-center">
               <span className="w-2.5 h-2.5 rounded-full bg-[#3f5e93]"></span>
             </span>

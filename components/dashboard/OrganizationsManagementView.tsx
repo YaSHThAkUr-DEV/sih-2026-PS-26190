@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ServiceSetupModal } from './ServiceSetupModal';
 import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
+import { UserPhotoUpload } from '@/components/ui/UserPhotoUpload';
 
 interface OrganizationsManagementViewProps {
   currentUserId?: string;
@@ -189,6 +190,7 @@ export default function OrganizationsManagementView({
     departmentId: '',
     maxSecurityLevel: 3,
     roleCodes: ['OFFICER'],
+    avatarUrl: null as string | null,
   });
 
   // Service Setup Modal State
@@ -354,6 +356,7 @@ export default function OrganizationsManagementView({
           departmentId: '',
           maxSecurityLevel: 3,
           roleCodes: ['OFFICER'],
+          avatarUrl: null,
         });
         loadOrgDetails(selectedOrgId);
         fetchFleetData();
@@ -1163,15 +1166,49 @@ export default function OrganizationsManagementView({
                           </td>
                         </tr>
                       ) : (
-                        (orgDetails.users?.slice((usersPage - 1) * PAGE_SIZE, usersPage * PAGE_SIZE) || []).map((u: any) => (
-                          <tr key={u.id} className="hover:bg-[#f0f3ff]/40 transition">
-                            <td className="py-3 px-4">
-                              <div className="font-bold text-[#10141A]">{u.fullName}</div>
-                              <div className="text-[11px] text-[#6B7280] font-mono">{u.email}</div>
-                              {u.employeeCode && (
-                                <div className="text-[10px] font-mono text-[#9CA3AF]">ID: {u.employeeCode}</div>
-                              )}
-                            </td>
+                        (orgDetails.users?.slice((usersPage - 1) * PAGE_SIZE, usersPage * PAGE_SIZE) || []).map((u: any) => {
+                          const initials = (u.fullName || 'U')
+                            .split(' ')
+                            .map((n: string) => n[0])
+                            .join('')
+                            .slice(0, 2)
+                            .toUpperCase();
+
+                          return (
+                            <tr key={u.id} className="hover:bg-[#f0f3ff]/40 transition">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="relative w-8 h-8 rounded-full shrink-0">
+                                    {u.avatarUrl ? (
+                                      /* eslint-disable-next-line @next/next/no-img-element */
+                                      <img
+                                        src={u.avatarUrl}
+                                        alt={u.fullName}
+                                        className="w-8 h-8 rounded-full object-cover border border-[#D8DEEA] shadow-2xs"
+                                      />
+                                    ) : (
+                                      <div className="w-8 h-8 rounded-full bg-[#10141A] text-white flex items-center justify-center font-bold text-[11px] shadow-2xs">
+                                        {initials}
+                                      </div>
+                                    )}
+                                    {u.avatarUrl && (
+                                      <span
+                                        className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white"
+                                        title="AI Face Recognition Enrolled"
+                                      >
+                                        <span className="material-symbols-outlined text-[8px] font-bold">check</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col min-w-0">
+                                    <div className="font-bold text-[#10141A] truncate">{u.fullName}</div>
+                                    <div className="text-[11px] text-[#6B7280] font-mono truncate">{u.email}</div>
+                                    {u.employeeCode && (
+                                      <div className="text-[10px] font-mono text-[#9CA3AF]">ID: {u.employeeCode}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
 
                             <td className="py-3 px-3">
                               <div className="font-semibold text-[#10141A]">{u.designation || 'Staff'}</div>
@@ -1211,8 +1248,8 @@ export default function OrganizationsManagementView({
                               </span>
                             </td>
                           </tr>
-                        ))
-                      )}
+                        );
+                      }))}
                     </tbody>
                   </table>
 
@@ -1628,7 +1665,7 @@ export default function OrganizationsManagementView({
       {/* ========================================================================= */}
       {userModalOpen && (
         <div className="fixed inset-0 z-50 bg-[#10141A]/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-[26px] shadow-2xl p-6 flex flex-col gap-4 border border-[#D8DEEA]">
+          <div className="bg-white w-full max-w-lg rounded-[26px] shadow-2xl p-6 flex flex-col gap-4 border border-[#D8DEEA] max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-2 border-b border-[#D8DEEA]/60">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#3f5e93]">person_add</span>
@@ -1640,6 +1677,14 @@ export default function OrganizationsManagementView({
             </div>
 
             <form onSubmit={handleEnrollUser} className="space-y-3.5 text-xs">
+              <UserPhotoUpload
+                value={userForm.avatarUrl}
+                onChange={(photo) => setUserForm({ ...userForm, avatarUrl: photo })}
+                name={userForm.fullName}
+                label="Officer Photo & Face Biometrics"
+                helperText="Upload official portrait for identification and upcoming AI Face Recognition."
+              />
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-[#45474b] mb-1">Full Name *</label>

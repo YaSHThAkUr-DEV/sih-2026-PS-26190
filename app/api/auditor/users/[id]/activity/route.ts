@@ -76,7 +76,7 @@ export async function GET(
     const userRows = await query<UserRow>(
       `SELECT 
          u.id, u.full_name, u.email, u.employee_code, u.designation,
-         u.status, u.created_at, u.last_login_at,
+         u.status, u.avatar_url, u.created_at, u.last_login_at,
          u.organization_id,
          dep.name as department_name, dep.code as department_code,
          array_agg(r.name) FILTER (WHERE r.name IS NOT NULL) as roles_list,
@@ -240,6 +240,7 @@ export async function GET(
         department: user.department_name || 'Central Administration',
         departmentCode: user.department_code || 'ADMIN',
         status: user.status,
+        avatarUrl: (user as any).avatar_url || null,
         roles: user.roles_list || ['OFFICER'],
         createdAt: user.created_at,
         lastLoginAt: user.last_login_at,

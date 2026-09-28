@@ -3,6 +3,7 @@ import { getCurrentSession } from '@/lib/auth/jwt';
 import { query } from '@/lib/db';
 import { isAdmin } from '@/lib/auth/rbac';
 import { logAuditEvent } from '@/lib/auth/audit';
+import { ensureUserPhotoSchema } from '@/lib/users/schema';
 import bcrypt from 'bcryptjs';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await ensureUserPhotoSchema();
     const session = await getCurrentSession(req);
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
@@ -34,7 +36,11 @@ export async function POST(
       departmentId,
       maxSecurityLevel,
       roleCodes = ['OFFICER'],
+      avatarUrl,
+      avatar_url,
     } = body;
+
+    const userAvatar = avatarUrl || avatar_url || null;
 
     if (!fullName || !email || !password) {
       return NextResponse.json(
@@ -60,10 +66,10 @@ export async function POST(
       `
       INSERT INTO users (
         organization_id, department_id, employee_code, username, full_name,
-        email, designation, password_hash, status, max_security_level
+        email, designation, password_hash, status, max_security_level, avatar_url
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE', $9)
-      RETURNING id, full_name, email, username, employee_code, designation, max_security_level, status, created_at;
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'ACTIVE', $9, $10)
+      RETURNING id, full_name, email, username, employee_code, designation, max_security_level, status, avatar_url, created_at;
       `,
       [
         orgId,
@@ -75,6 +81,7 @@ export async function POST(
         designation || 'Officer',
         hashedPassword,
         clearance,
+        userAvatar,
       ]
     );
 
