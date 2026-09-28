@@ -808,12 +808,12 @@ export default function JobQueuesView() {
                 onChange={(e) => setSelectedTestQueue(e.target.value)}
                 className="text-xs font-semibold bg-[#f0f3ff]/60 border border-[#D8DEEA] rounded-xl px-3 py-2.5 text-[#151c27] focus:outline-none cursor-pointer"
               >
-                <option value="ALL">⚡ Test All 5 Queues Concurrently</option>
-                <option value="ocr-queue">📄 OCR Extraction Queue (ocr-queue)</option>
-                <option value="blockchain-queue">⛓️ Hyperledger Fabric Queue (blockchain-queue)</option>
-                <option value="notification-queue">🔔 Notification Fanout Queue (notification-queue)</option>
-                <option value="retention-queue">⚖️ BNSS Retention Audit Queue (retention-queue)</option>
-                <option value="cleanup-queue">🗑️ Crypto-Shred Zeroization Queue (cleanup-queue)</option>
+                <option value="ALL">Test All 5 Queues Concurrently</option>
+                <option value="ocr-queue">OCR Extraction Queue (ocr-queue)</option>
+                <option value="blockchain-queue">Hyperledger Fabric Queue (blockchain-queue)</option>
+                <option value="notification-queue">Notification Fanout Queue (notification-queue)</option>
+                <option value="retention-queue">BNSS Retention Audit Queue (retention-queue)</option>
+                <option value="cleanup-queue">Crypto-Shred Zeroization Queue (cleanup-queue)</option>
               </select>
             </div>
 

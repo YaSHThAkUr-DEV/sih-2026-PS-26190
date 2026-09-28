@@ -878,7 +878,7 @@ export default function EvidenceIngestionView({
                       {securityLevels.length > 0 ? (
                         securityLevels.map((sl) => (
                           <option key={sl.id} value={sl.code} disabled={!sl.isAccessible}>
-                            {sl.code} — {sl.name} (Rank {sl.rank}) {!sl.isAccessible ? '🔒 Restricted' : ''}
+                            {sl.code} — {sl.name} (Rank {sl.rank}) {!sl.isAccessible ? '(Restricted)' : ''}
                           </option>
                         ))
                       ) : (
@@ -1275,7 +1275,7 @@ export default function EvidenceIngestionView({
                   {securityLevels.length > 0 ? (
                     securityLevels.map((sl) => (
                       <option key={sl.id} value={sl.code} disabled={!sl.isAccessible}>
-                        {sl.code} — {sl.name} (Rank {sl.rank}) {!sl.isAccessible ? '🔒 Restricted' : ''}
+                        {sl.code} — {sl.name} (Rank {sl.rank}) {!sl.isAccessible ? '(Restricted)' : ''}
                       </option>
                     ))
                   ) : (

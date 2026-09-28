@@ -1243,9 +1243,10 @@ export default function OrganizationsManagementView({
                               <td className="py-2.5 px-3 font-mono font-bold text-[#3f5e93]">{r.requestNumber}</td>
                               <td className="py-2.5 px-3 font-semibold">{r.requestingOrgName} ({r.requestingOrgCode})</td>
                               <td className="py-2.5 px-3">{r.targetDocumentTitle || r.targetDocumentNumber}</td>
-                              <td className="py-2.5 px-3">
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                  {r.urgency}
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                  <span>{r.urgency}</span>
                                 </span>
                               </td>
                               <td className="py-2.5 px-3">
@@ -1291,9 +1292,10 @@ export default function OrganizationsManagementView({
                               <td className="py-2.5 px-3 font-mono font-bold text-[#3f5e93]">{r.requestNumber}</td>
                               <td className="py-2.5 px-3 font-semibold">{r.targetOrgName} ({r.targetOrgCode})</td>
                               <td className="py-2.5 px-3">{r.targetDocumentTitle || r.targetDocumentNumber}</td>
-                              <td className="py-2.5 px-3">
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                  {r.urgency}
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                                  <span>{r.urgency}</span>
                                 </span>
                               </td>
                               <td className="py-2.5 px-3">

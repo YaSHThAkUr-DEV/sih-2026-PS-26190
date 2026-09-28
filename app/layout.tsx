@@ -3,12 +3,6 @@ import { Plus_Jakarta_Sans, JetBrains_Mono, Oswald } from "next/font/google";
 import localFont from "next/font/local";
 import "./globals.css";
 
-const righteous = localFont({
-  src: "./fonts/Righteous-Regular.ttf",
-  variable: "--font-righteous",
-  display: "swap",
-});
-
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
@@ -19,6 +13,12 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const righteous = localFont({
+  src: "./fonts/Righteous-Regular.ttf",
+  variable: "--font-righteous",
   display: "swap",
 });
 
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${righteous.variable} ${plusJakartaSans.variable} ${jetbrainsMono.variable} ${oswald.variable} h-full antialiased`}
+      className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} ${righteous.variable} ${oswald.variable} h-full antialiased`}
     >
       <head>
         <link rel="icon" type="image/png" href="/nirman-logo.png" />
@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Oswald:wght@200..700&display=swap"
           rel="stylesheet"
         />
         <link

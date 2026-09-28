@@ -126,10 +126,10 @@ async function seedCollaboration() {
     // =========================================================================
     console.log('5. Seeding Dynamic Urgency & SLA Tiers...');
     const priorityTiers = [
-      { code: 'COURT_MANDATE', name: 'Critical Court Mandate / Habeas Corpus', sla: 2, color: '#ef4444', desc: 'Direct judicial order with strict immediate production timeline', reqJust: true },
-      { code: 'URGENT_WARRANT', name: 'Urgent Investigation / Arrest Warrant', sla: 24, color: '#f97316', desc: 'Time-sensitive criminal case, apprehension, or bail hearing', reqJust: true },
-      { code: 'HIGH_PRIORITY', name: 'High Priority Administrative Inquiry', sla: 48, color: '#eab308', desc: 'Vigilance inquiry, legislative question, or compliance deadline', reqJust: false },
-      { code: 'ROUTINE', name: 'Standard Inter-Agency Request', sla: 168, color: '#3b82f6', desc: 'Regular inter-departmental verification and record sharing (7 Days)', reqJust: false },
+      { code: 'COURT_MANDATE', name: 'Court Mandate', sla: 2, color: '#ef4444', desc: 'Direct judicial order with strict immediate production timeline', reqJust: true },
+      { code: 'URGENT_WARRANT', name: 'Urgent Warrant', sla: 24, color: '#f97316', desc: 'Time-sensitive criminal case, apprehension, or bail hearing', reqJust: true },
+      { code: 'HIGH_PRIORITY', name: 'High Priority', sla: 48, color: '#eab308', desc: 'Vigilance inquiry, legislative question, or compliance deadline', reqJust: false },
+      { code: 'ROUTINE', name: 'Standard Routine', sla: 168, color: '#3b82f6', desc: 'Regular inter-departmental verification and record sharing (7 Days)', reqJust: false },
     ];
 
     const priorityMap: Record<string, string> = {};

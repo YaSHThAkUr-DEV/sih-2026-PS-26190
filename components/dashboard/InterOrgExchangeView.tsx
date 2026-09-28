@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 // =============================================================================
 // INTER-ORGANIZATION COLLABORATION HIGHWAY COMPONENT
@@ -125,6 +125,14 @@ export default function InterOrgExchangeView({
   }>({});
   const [directoryOrgs, setDirectoryOrgs] = useState<OrgDirectoryItem[]>([]);
   const [localDocs, setLocalDocs] = useState<any[]>([]);
+
+  // Filter out the current organization so users only dispatch or requisition to external agencies
+  const externalRecipientOrgs = useMemo(() => {
+    return directoryOrgs.filter((o) => {
+      if (!currentOrg) return true;
+      return o.id !== currentOrg.id && o.code !== currentOrg.code;
+    });
+  }, [directoryOrgs, currentOrg]);
 
   // Dynamic Taxonomies
   const [taxonomies, setTaxonomies] = useState<any>({
@@ -758,16 +766,20 @@ export default function InterOrgExchangeView({
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-3">
+                        <td className="py-3.5 px-3 whitespace-nowrap">
                           <span
-                            className="px-2.5 py-0.5 rounded-full text-[10px] font-bold font-mono"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold font-sans whitespace-nowrap shadow-2xs"
                             style={{
-                              backgroundColor: req.priorityBadgeColor ? `${req.priorityBadgeColor}15` : '#eab30815',
-                              color: req.priorityBadgeColor || '#eab308',
-                              border: `1px solid ${req.priorityBadgeColor ? `${req.priorityBadgeColor}40` : '#eab30840'}`,
+                              backgroundColor: req.priorityBadgeColor ? `${req.priorityBadgeColor}15` : '#f0f3ff',
+                              color: req.priorityBadgeColor || '#3f5e93',
+                              border: `1px solid ${req.priorityBadgeColor ? `${req.priorityBadgeColor}35` : '#D8DEEA'}`,
                             }}
                           >
-                            {req.priorityTierName || 'Standard'}
+                            <span
+                              className="w-1.5 h-1.5 rounded-full shrink-0"
+                              style={{ backgroundColor: req.priorityBadgeColor || '#3f5e93' }}
+                            />
+                            <span>{req.priorityTierName || 'Standard'}</span>
                           </span>
                         </td>
 
@@ -998,30 +1010,36 @@ export default function InterOrgExchangeView({
                       Nodal: <b className="text-[#45474b]">{org.nodalOfficerName || 'Registrar'}</b>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => {
-                          setDispatchForm((prev) => ({ ...prev, targetOrgId: org.id }));
-                          setDispatchModalOpen(true);
-                        }}
-                        className="px-2.5 py-1 rounded-full bg-[#3f5e93] hover:bg-[#324b75] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
-                        title="Send uploaded document to this agency"
-                      >
-                        <span className="material-symbols-outlined text-[13px]">send</span>
-                        <span>Dispatch</span>
-                      </button>
+                    {currentOrg && (org.id === currentOrg.id || org.code === currentOrg.code) ? (
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#f0f3ff] text-[#3f5e93] border border-[#83A2DB]/40">
+                        Your Organization (Home Node)
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => {
+                            setDispatchForm((prev) => ({ ...prev, targetOrgId: org.id }));
+                            setDispatchModalOpen(true);
+                          }}
+                          className="px-2.5 py-1 rounded-full bg-[#3f5e93] hover:bg-[#324b75] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
+                          title="Send uploaded document to this agency"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">send</span>
+                          <span>Dispatch</span>
+                        </button>
 
-                      <button
-                        onClick={() => {
-                          setReqForm((prev) => ({ ...prev, targetOrgId: org.id }));
-                          setCreateModalOpen(true);
-                        }}
-                        className="px-2.5 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
-                      >
-                        <span className="material-symbols-outlined text-[13px]">add_task</span>
-                        <span>Demand</span>
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => {
+                            setReqForm((prev) => ({ ...prev, targetOrgId: org.id }));
+                            setCreateModalOpen(true);
+                          }}
+                          className="px-2.5 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
+                        >
+                          <span className="material-symbols-outlined text-[13px]">add_task</span>
+                          <span>Demand</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1086,7 +1104,7 @@ export default function InterOrgExchangeView({
                   className="w-full h-9 px-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] font-semibold outline-none focus:bg-white"
                 >
                   <option value="">-- Choose Recipient Organization / Court --</option>
-                  {directoryOrgs.map((o) => (
+                  {externalRecipientOrgs.map((o) => (
                     <option key={`disp-org-${o.id}`} value={o.id}>
                       {o.name} ({o.code}) - {o.regionName}
                     </option>
@@ -1198,7 +1216,7 @@ export default function InterOrgExchangeView({
                   className="w-full h-9 px-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] font-semibold outline-none focus:bg-white"
                 >
                   <option value="">-- Select Target Agency / Court --</option>
-                  {directoryOrgs.map((o) => (
+                  {externalRecipientOrgs.map((o) => (
                     <option key={`req-target-${o.id}`} value={o.id}>
                       {o.name} ({o.code}) - {o.regionName}
                     </option>
