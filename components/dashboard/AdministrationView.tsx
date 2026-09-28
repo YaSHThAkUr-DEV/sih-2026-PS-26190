@@ -178,6 +178,8 @@ export default function AdministrationView({
   const [systemConfig, setSystemConfig] = useState<any>(null);
   const [systemMetrics, setSystemMetrics] = useState<any>(null);
   const [recentAudits, setRecentAudits] = useState<AdminAuditItem[]>([]);
+  const [recentAuditsPage, setRecentAuditsPage] = useState(1);
+  const AUDITS_PAGE_SIZE = 10;
 
   // Users Filter States
   const [userSearch, setUserSearch] = useState('');
@@ -2017,9 +2019,14 @@ export default function AdministrationView({
 
             {/* Audit Logs Table */}
             <div className="bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 space-y-3">
-              <span className="text-xs font-semibold text-[#10141A] uppercase tracking-wider">
-                Recent Administrative Events
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-[#10141A] uppercase tracking-wider">
+                  Recent Administrative Events
+                </span>
+                <span className="text-[11px] font-mono text-[#6B7280]">
+                  {recentAudits.length} Events Total (Max 10 / page)
+                </span>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -2033,22 +2040,70 @@ export default function AdministrationView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
-                    {recentAudits.map((a) => (
-                      <tr key={a.id}>
-                        <td className="py-2.5 px-3 font-mono text-[#6B7280]">{new Date(a.created_at).toLocaleString()}</td>
-                        <td className="py-2.5 px-3 font-medium text-[#10141A]">{a.actor_name || 'System Admin'}</td>
-                        <td className="py-2.5 px-3 font-mono text-[#3f5e93]">{a.event_type}</td>
-                        <td className="py-2.5 px-3">
-                          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
-                            {a.result}
-                          </span>
+                    {recentAudits.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-[#6B7280]">
+                          No administrative events recorded yet.
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-[#9CA3AF]">{a.ip_address}</td>
                       </tr>
-                    ))}
+                    ) : (
+                      recentAudits.slice((recentAuditsPage - 1) * AUDITS_PAGE_SIZE, recentAuditsPage * AUDITS_PAGE_SIZE).map((a) => (
+                        <tr key={a.id}>
+                          <td className="py-2.5 px-3 font-mono text-[#6B7280] whitespace-nowrap">{new Date(a.created_at).toLocaleString()}</td>
+                          <td className="py-2.5 px-3 font-medium text-[#10141A]">{a.actor_name || 'System Admin'}</td>
+                          <td className="py-2.5 px-3 font-mono font-semibold text-[#3f5e93]">{a.event_type}</td>
+                          <td className="py-2.5 px-3">
+                            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+                              {a.result}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-[#9CA3AF]">{a.ip_address}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
+
+              {recentAudits.length > AUDITS_PAGE_SIZE && (
+                <div className="pt-3 border-t border-[#D8DEEA]/60 flex items-center justify-between text-xs text-[#6B7280]">
+                  <span className="text-[11px]">
+                    Showing <b>{(recentAuditsPage - 1) * AUDITS_PAGE_SIZE + 1}–{Math.min(recentAuditsPage * AUDITS_PAGE_SIZE, recentAudits.length)}</b> of <b>{recentAudits.length}</b> events
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setRecentAuditsPage((p) => Math.max(1, p - 1))}
+                      disabled={recentAuditsPage === 1}
+                      className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[11px] font-medium"
+                    >
+                      Prev
+                    </button>
+                    {Array.from({ length: Math.ceil(recentAudits.length / AUDITS_PAGE_SIZE) }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setRecentAuditsPage(pageNum)}
+                        className={`w-6 h-6 rounded-full text-[11px] font-semibold cursor-pointer transition ${
+                          recentAuditsPage === pageNum
+                            ? 'bg-[#000000] text-white shadow-2xs'
+                            : 'bg-white hover:bg-[#f0f3ff] text-[#151c27] border border-[#D8DEEA]'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setRecentAuditsPage((p) => Math.min(Math.ceil(recentAudits.length / AUDITS_PAGE_SIZE), p + 1))}
+                      disabled={recentAuditsPage === Math.ceil(recentAudits.length / AUDITS_PAGE_SIZE)}
+                      className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[11px] font-medium"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

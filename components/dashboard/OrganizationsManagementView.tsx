@@ -41,6 +41,75 @@ interface FleetOrganization {
   outboundRequestsCount: number;
 }
 
+function TablePagination({
+  currentPage,
+  totalItems,
+  pageSize = 10,
+  onPageChange,
+  label = 'records',
+}: {
+  currentPage: number;
+  totalItems: number;
+  pageSize?: number;
+  onPageChange: (page: number) => void;
+  label?: string;
+}) {
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  if (totalItems <= pageSize && currentPage === 1) return null;
+
+  const startIdx = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIdx = Math.min(currentPage * pageSize, totalItems);
+
+  return (
+    <div className="px-4 py-3 border-t border-[#D8DEEA]/60 bg-white flex items-center justify-between flex-wrap gap-2 text-xs">
+      <span className="text-[#6B7280] text-[11px]">
+        Showing <b className="text-[#10141A]">{startIdx}–{endIdx}</b> of <b className="text-[#10141A]">{totalItems}</b> {label}
+      </span>
+
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[11px] font-medium transition"
+        >
+          Prev
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1)
+          .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+          .map((pageNum, idx, arr) => {
+            const prev = arr[idx - 1];
+            const hasGap = prev && pageNum - prev > 1;
+            return (
+              <React.Fragment key={pageNum}>
+                {hasGap && <span className="px-1 text-[#9CA3AF] text-xs">...</span>}
+                <button
+                  type="button"
+                  onClick={() => onPageChange(pageNum)}
+                  className={`w-7 h-7 rounded-full text-[11px] font-semibold cursor-pointer transition ${
+                    currentPage === pageNum
+                      ? 'bg-[#000000] text-white shadow-2xs'
+                      : 'bg-white hover:bg-[#f0f3ff] text-[#151c27] border border-[#D8DEEA]'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[11px] font-medium transition"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function OrganizationsManagementView({
   currentUserId,
   currentUserRoles = [],
@@ -56,6 +125,14 @@ export default function OrganizationsManagementView({
 
   // Inspector sub-tab: 'profile' | 'departments' | 'users' | 'vault' | 'exchanges'
   const [inspectorTab, setInspectorTab] = useState<'profile' | 'departments' | 'users' | 'vault' | 'exchanges'>('profile');
+
+  // Inspector Pagination (Max 10 items per page)
+  const [vaultPage, setVaultPage] = useState(1);
+  const [auditLogPage, setAuditLogPage] = useState(1);
+  const [usersPage, setUsersPage] = useState(1);
+  const [inboundPage, setInboundPage] = useState(1);
+  const [outboundPage, setOutboundPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   // Fleet data
   const [fleetSummary, setFleetSummary] = useState<any>({});
@@ -191,6 +268,11 @@ export default function OrganizationsManagementView({
     setSelectedOrgId(orgId);
     setActiveMainTab('inspector');
     setInspectorTab('profile');
+    setVaultPage(1);
+    setAuditLogPage(1);
+    setUsersPage(1);
+    setInboundPage(1);
+    setOutboundPage(1);
     loadOrgDetails(orgId);
   };
 
@@ -1081,7 +1163,7 @@ export default function OrganizationsManagementView({
                           </td>
                         </tr>
                       ) : (
-                        orgDetails.users.map((u: any) => (
+                        (orgDetails.users?.slice((usersPage - 1) * PAGE_SIZE, usersPage * PAGE_SIZE) || []).map((u: any) => (
                           <tr key={u.id} className="hover:bg-[#f0f3ff]/40 transition">
                             <td className="py-3 px-4">
                               <div className="font-bold text-[#10141A]">{u.fullName}</div>
@@ -1133,6 +1215,14 @@ export default function OrganizationsManagementView({
                       )}
                     </tbody>
                   </table>
+
+                  <TablePagination
+                    currentPage={usersPage}
+                    totalItems={orgDetails.users?.length || 0}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setUsersPage}
+                    label="officers"
+                  />
                 </div>
               </div>
             )}
@@ -1144,7 +1234,7 @@ export default function OrganizationsManagementView({
                   <div>
                     <h3 className="font-bold text-sm text-[#10141A]">Local Vault Documents</h3>
                     <p className="text-xs text-[#6B7280]">
-                      Showing recent encrypted dockets stored in {orgDetails.organization?.name}&apos;s local repository
+                      Showing encrypted dockets stored in {orgDetails.organization?.name}&apos;s local repository (max 10 per page)
                     </p>
                   </div>
                 </div>
@@ -1169,7 +1259,7 @@ export default function OrganizationsManagementView({
                           </td>
                         </tr>
                       ) : (
-                        orgDetails.documents.map((doc: any) => (
+                        (orgDetails.documents?.slice((vaultPage - 1) * PAGE_SIZE, vaultPage * PAGE_SIZE) || []).map((doc: any) => (
                           <tr key={doc.id} className="hover:bg-[#f0f3ff]/40 transition">
                             <td className="py-3 px-4 font-mono font-bold text-[#3f5e93]">{doc.documentNumber}</td>
                             <td className="py-3 px-4">
@@ -1196,6 +1286,14 @@ export default function OrganizationsManagementView({
                       )}
                     </tbody>
                   </table>
+
+                  <TablePagination
+                    currentPage={vaultPage}
+                    totalItems={orgDetails.documents?.length || 0}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setVaultPage}
+                    label="documents"
+                  />
                 </div>
               </div>
             )}
@@ -1228,7 +1326,7 @@ export default function OrganizationsManagementView({
                             </td>
                           </tr>
                         ) : (
-                          orgDetails.inboundRequests.map((r: any, idx: number) => (
+                          (orgDetails.inboundRequests?.slice((inboundPage - 1) * PAGE_SIZE, inboundPage * PAGE_SIZE) || []).map((r: any, idx: number) => (
                             <tr key={`org-inbound-${r.id}-${idx}`} className="hover:bg-[#f0f3ff]/40">
                               <td className="py-2.5 px-3 font-mono font-bold text-[#3f5e93]">{r.requestNumber}</td>
                               <td className="py-2.5 px-3 font-semibold">{r.requestingOrgName} ({r.requestingOrgCode})</td>
@@ -1250,6 +1348,14 @@ export default function OrganizationsManagementView({
                       </tbody>
                     </table>
                   </div>
+
+                  <TablePagination
+                    currentPage={inboundPage}
+                    totalItems={orgDetails.inboundRequests?.length || 0}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setInboundPage}
+                    label="inbound requisitions"
+                  />
                 </div>
 
                 {/* Outbound Requisitions */}
@@ -1277,7 +1383,7 @@ export default function OrganizationsManagementView({
                             </td>
                           </tr>
                         ) : (
-                          orgDetails.outboundRequests.map((r: any, idx: number) => (
+                          (orgDetails.outboundRequests?.slice((outboundPage - 1) * PAGE_SIZE, outboundPage * PAGE_SIZE) || []).map((r: any, idx: number) => (
                             <tr key={`org-outbound-${r.id}-${idx}`} className="hover:bg-[#f0f3ff]/40">
                               <td className="py-2.5 px-3 font-mono font-bold text-[#3f5e93]">{r.requestNumber}</td>
                               <td className="py-2.5 px-3 font-semibold">{r.targetOrgName} ({r.targetOrgCode})</td>
@@ -1299,6 +1405,14 @@ export default function OrganizationsManagementView({
                       </tbody>
                     </table>
                   </div>
+
+                  <TablePagination
+                    currentPage={outboundPage}
+                    totalItems={orgDetails.outboundRequests?.length || 0}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setOutboundPage}
+                    label="outbound requisitions"
+                  />
                 </div>
 
                 {/* Institutional Administrative & Security Audit Trail */}
@@ -1333,7 +1447,7 @@ export default function OrganizationsManagementView({
                             </td>
                           </tr>
                         ) : (
-                          orgDetails.auditLogs.map((log: any, idx: number) => (
+                          (orgDetails.auditLogs?.slice((auditLogPage - 1) * PAGE_SIZE, auditLogPage * PAGE_SIZE) || []).map((log: any, idx: number) => (
                             <tr key={`org-audit-${log.id || idx}`} className="hover:bg-[#f0f3ff]/40">
                               <td className="py-2.5 px-3 font-mono text-[#6B7280] whitespace-nowrap">
                                 {new Date(log.createdAt).toLocaleString()}
@@ -1368,6 +1482,14 @@ export default function OrganizationsManagementView({
                       </tbody>
                     </table>
                   </div>
+
+                  <TablePagination
+                    currentPage={auditLogPage}
+                    totalItems={orgDetails.auditLogs?.length || 0}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setAuditLogPage}
+                    label="audit events"
+                  />
                 </div>
               </div>
             )}
