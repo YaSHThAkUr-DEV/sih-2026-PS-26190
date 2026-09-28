@@ -639,4 +639,97 @@ mark {
   height: 0.9rem;
 }
 
+/* ========================================================================== */
+/* UIVERSE DASHED BUTTON (From Uiverse.io by Shakil-Babu)                     */
+/* ========================================================================== */
+.btn-uiverse {
+  --btn-color: #10141A;
+  --btn-active-color: #334155;
+  background-color: var(--btn-color);
+  padding: 8px 20px;
+  color: #ffffff;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 2px dashed var(--btn-color);
+  box-shadow: rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
+  transition: all 0.4s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+  user-select: none;
+}
+
+.btn-uiverse:hover {
+  transition: all 0.4s ease;
+  border: 2px dashed var(--btn-color);
+  background-color: #ffffff !important;
+  color: var(--btn-color) !important;
+  box-shadow: rgba(50, 50, 93, 0.35) 0px 4px 10px -2px, rgba(0, 0, 0, 0.2) 0px 2px 6px -1px;
+}
+
+.btn-uiverse:hover .material-symbols-outlined,
+.btn-uiverse:hover svg {
+  color: var(--btn-color) !important;
+  fill: var(--btn-color) !important;
+}
+
+.btn-uiverse:active {
+  background-color: var(--btn-active-color) !important;
+  color: #ffffff !important;
+  transform: scale(0.98);
+}
+
+.btn-uiverse:disabled,
+.btn-uiverse[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Color Variants */
+.btn-uiverse-primary {
+  --btn-color: #10141A;
+  --btn-active-color: #2b384e;
+}
+
+.btn-uiverse-cobalt {
+  --btn-color: #3f5e93;
+  --btn-active-color: #83A2DB;
+}
+
+.btn-uiverse-teal {
+  --btn-color: #00BFA6;
+  --btn-active-color: #87dbd0;
+}
+
+.btn-uiverse-blue {
+  --btn-color: #2563EB;
+  --btn-active-color: #93c5fd;
+}
+
+.btn-uiverse-danger {
+  --btn-color: #ba1a1a;
+  --btn-active-color: #fca5a5;
+}
+
+/* Size Variants */
+.btn-uiverse-sm {
+  padding: 5px 14px;
+  font-size: 11px;
+  border-radius: 8px;
+  border-width: 1.5px;
+}
+
+.btn-uiverse-lg {
+  padding: 12px 28px;
+  font-size: 13px;
+  border-radius: 12px;
+}
+
+
 

@@ -1029,7 +1029,7 @@ export default function DashboardPage() {
                   </button>
                   <button
                     onClick={() => setActiveView('upload')}
-                    className="h-10 px-5 bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold rounded-full shadow-[0_6px_18px_rgba(16,20,26,0.22)] transition flex items-center gap-1.5 cursor-pointer"
+                    className="btn-uiverse btn-uiverse-primary h-10 px-5"
                   >
                     <span className="material-symbols-outlined text-[16px]">upload_file</span>
                     <span>+ Upload Document</span>

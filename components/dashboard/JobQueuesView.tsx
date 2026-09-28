@@ -261,7 +261,7 @@ export default function JobQueuesView() {
           <button
             onClick={handleTriggerTick}
             disabled={executingTick || draining}
-            className="h-10 px-4 flex items-center gap-1.5 bg-[#000000] hover:bg-[#181c22] text-white rounded-full text-xs font-semibold shadow-xs transition disabled:opacity-50 cursor-pointer"
+            className="btn-uiverse btn-uiverse-primary h-10 px-4"
             title="Execute one worker pass across all 5 queues"
           >
             <span className={`material-symbols-outlined text-[16px] ${executingTick ? 'animate-spin' : ''}`}>

@@ -545,7 +545,7 @@ export default function RetentionHoldStudioView({
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => handleOpenLegalHoldModal()}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#000000] text-white hover:bg-[#181c22] text-xs font-medium transition shadow-[0_6px_18px_rgba(16,20,26,0.22)]"
+              className="btn-uiverse btn-uiverse-primary"
             >
               <span className="material-symbols-outlined text-[16px] text-[#83A2DB]">lock</span>
               <span>Apply Preservation Lock</span>
@@ -1011,7 +1011,7 @@ export default function RetentionHoldStudioView({
                 </div>
                 <button
                   onClick={handleVerifyCNR}
-                  className="px-3.5 py-2 bg-[#000000] text-white rounded-full text-xs font-medium hover:bg-[#181c22] transition shrink-0 cursor-pointer shadow-xs"
+                  className="btn-uiverse btn-uiverse-primary btn-uiverse-sm shrink-0"
                 >
                   Verify
                 </button>

@@ -285,10 +285,10 @@ export function OcrIntelligenceView({
           <button
             type="submit"
             disabled={loading}
-            className="h-10 px-5 bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold rounded-full shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer transition shrink-0"
+            className="btn-uiverse btn-uiverse-primary h-10 px-5 shrink-0"
           >
             {loading ? (
-              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
             ) : (
               <span className="material-symbols-outlined text-[16px]">manage_search</span>
             )}

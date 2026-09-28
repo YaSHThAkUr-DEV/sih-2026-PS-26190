@@ -385,7 +385,7 @@ export default function UsersManagementView({
                 resetForm();
                 setCreateModalOpen(true);
               }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#000000] text-white hover:bg-[#181c22] text-xs font-medium transition shadow-[0_6px_18px_rgba(16,20,26,0.22)]"
+              className="btn-uiverse btn-uiverse-primary"
             >
               <span className="material-symbols-outlined text-[16px]">person_add</span>
               <span>Enroll User</span>

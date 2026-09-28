@@ -655,11 +655,11 @@ function PublicVerifierTerminal() {
                   <button
                     type="submit"
                     disabled={loading || !inputKey.trim()}
-                    className="w-full sm:w-auto px-6 py-3.5 sm:py-3 bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-bold rounded-xl shadow-btn-shadow flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
+                    className="btn-uiverse btn-uiverse-primary btn-uiverse-lg w-full sm:w-auto shrink-0"
                   >
                     {loading ? (
                       <>
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
                         <span>Querying Ledger...</span>
                       </>
                     ) : (

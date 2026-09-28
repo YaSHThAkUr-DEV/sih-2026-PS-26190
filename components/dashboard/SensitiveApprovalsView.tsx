@@ -556,7 +556,7 @@ export default function SensitiveApprovalsView({
                 type="button"
                 disabled={isDeciding || !activeRequest.canApprove}
                 onClick={() => handleExecuteDecision('APPROVED')}
-                className="h-10 px-6 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold shadow-[0_6px_18px_rgba(16,20,26,0.22)] transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="btn-uiverse btn-uiverse-primary h-10 px-6"
               >
                 <span className="material-symbols-outlined text-[18px]">verified</span>
                 <span>Approve &amp; Promote Revision</span>

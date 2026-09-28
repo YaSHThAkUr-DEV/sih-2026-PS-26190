@@ -640,7 +640,7 @@ export default function OrganizationsManagementView({
                                 <div className="flex items-center justify-end gap-1.5">
                                   <button
                                     onClick={() => handleSelectOrgToInspect(org.id)}
-                                    className="px-3.5 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer shadow-2xs"
+                                    className="btn-uiverse btn-uiverse-primary btn-uiverse-sm"
                                     title="Inspect & Configure"
                                   >
                                     <span className="material-symbols-outlined text-[14px]">tune</span>
@@ -823,7 +823,7 @@ export default function OrganizationsManagementView({
                   </div>
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold transition shadow-xs cursor-pointer flex items-center gap-1.5"
+                    className="btn-uiverse btn-uiverse-primary"
                   >
                     <span className="material-symbols-outlined text-[16px]">save</span>
                     <span>Save Changes</span>

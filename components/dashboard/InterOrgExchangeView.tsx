@@ -631,7 +631,7 @@ export default function InterOrgExchangeView({
                   }
                   setDispatchModalOpen(true);
                 }}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#3f5e93] text-white hover:bg-[#324b75] text-xs font-semibold transition shadow-md cursor-pointer"
+                className="btn-uiverse btn-uiverse-cobalt"
               >
                 <span className="material-symbols-outlined text-[16px]">send_and_archive</span>
                 <span>⚡ Direct Document Dispatch</span>
@@ -642,7 +642,7 @@ export default function InterOrgExchangeView({
             {canRequest && (
               <button
                 onClick={() => setCreateModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#000000] text-white hover:bg-[#181c22] text-xs font-semibold transition shadow-md cursor-pointer"
+                className="btn-uiverse btn-uiverse-primary"
               >
                 <span className="material-symbols-outlined text-[16px]">add_task</span>
                 <span>Demand Requisition</span>
