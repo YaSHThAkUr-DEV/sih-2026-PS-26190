@@ -184,10 +184,12 @@ export default function AdministrationView({
   const [userDeptFilter, setUserDeptFilter] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
 
-  // RBAC Selected Role
+  // RBAC Selected Role & Filters
   const [selectedRole, setSelectedRole] = useState<RoleItem | null>(null);
   const [rolePermissionsState, setRolePermissionsState] = useState<string[]>([]);
   const [savingPermissions, setSavingPermissions] = useState(false);
+  const [permissionSearch, setPermissionSearch] = useState('');
+  const [permissionCategoryFilter, setPermissionCategoryFilter] = useState('ALL');
 
   // Policy Selected Department & Search
   const [policySubTab, setPolicySubTab] = useState<'routing' | 'schedules'>('routing');
@@ -900,6 +902,65 @@ export default function AdministrationView({
     }
   };
 
+  const getPermissionBadgeStyle = (category?: string) => {
+    switch (category) {
+      case 'Cross-Agency':
+      case 'Cross-Agency Federation & Inter-Org Hub':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200/80';
+      case 'Blockchain':
+      case 'Blockchain & Ledger Integrity':
+        return 'bg-cyan-50 text-cyan-800 border-cyan-300 font-bold';
+      case 'Approvals':
+      case 'Maker-Checker Workflows':
+        return 'bg-amber-50 text-amber-800 border-amber-200/80';
+      case 'Retention':
+      case 'Statutory Retention & Archive':
+        return 'bg-purple-50 text-purple-700 border-purple-200/80';
+      case 'Audit & Logs':
+      case 'Audit & Forensics':
+        return 'bg-emerald-50 text-emerald-800 border-emerald-200/80';
+      case 'Access & Identity':
+      case 'Access & Identity Governance':
+        return 'bg-blue-50 text-blue-700 border-blue-200/80';
+      case 'Documents':
+      default:
+        return 'bg-slate-100 text-slate-700 border-slate-200';
+    }
+  };
+
+  const permissionCategories = useMemo(() => {
+    const cats = new Set<string>();
+    permissions.forEach((p) => {
+      if (p.category) cats.add(p.category);
+    });
+    return ['ALL', ...Array.from(cats)];
+  }, [permissions]);
+
+  const filteredPermissions = useMemo(() => {
+    return permissions.filter((p) => {
+      const matchesCat =
+        permissionCategoryFilter === 'ALL' || p.category === permissionCategoryFilter;
+      const q = permissionSearch.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        p.code.toLowerCase().includes(q) ||
+        (p.description && p.description.toLowerCase().includes(q)) ||
+        (p.category && p.category.toLowerCase().includes(q));
+      return matchesCat && matchesSearch;
+    });
+  }, [permissions, permissionCategoryFilter, permissionSearch]);
+
+  const handleSelectAllFilteredPermissions = () => {
+    const idsToAdd = filteredPermissions.map((p) => p.id);
+    const set = new Set([...rolePermissionsState, ...idsToAdd]);
+    setRolePermissionsState(Array.from(set));
+  };
+
+  const handleDeselectAllFilteredPermissions = () => {
+    const idsToRemove = new Set(filteredPermissions.map((p) => p.id));
+    setRolePermissionsState(rolePermissionsState.filter((id) => !idsToRemove.has(id)));
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6">
       {/* Toast Feedback */}
@@ -1158,32 +1219,49 @@ export default function AdministrationView({
             {/* Roles List */}
             <div className="lg:col-span-4 bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-[#D8DEEA]/60">
-                <span className="text-xs font-semibold text-[#10141A] uppercase tracking-wider">Roles</span>
+                <div>
+                  <span className="text-xs font-semibold text-[#10141A] uppercase tracking-wider">Roles ({roles.length})</span>
+                  <p className="text-[11px] text-[#6B7280]">Select a role to configure permissions.</p>
+                </div>
                 <button
                   onClick={() => setCreateRoleModalOpen(true)}
-                  className="px-2.5 py-1 bg-[#000000] text-white rounded-full text-[11px] font-medium hover:bg-[#181c22]"
+                  className="px-3 py-1.5 bg-[#000000] text-white rounded-full text-[11px] font-medium hover:bg-[#181c22] transition shadow-xs flex items-center gap-1 cursor-pointer"
                 >
-                  + Add Role
+                  <span className="material-symbols-outlined text-[14px]">add</span>
+                  <span>Add Role</span>
                 </button>
               </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-2 max-h-[580px] overflow-y-auto pr-1">
                 {roles.map((r) => {
                   const isSelected = selectedRole?.id === r.id;
                   return (
                     <div
                       key={r.id}
                       onClick={() => handleSelectRole(r)}
-                      className={`p-3 rounded-[16px] cursor-pointer transition flex items-center justify-between border ${isSelected
-                          ? 'bg-[#f0f3ff] border-[#83A2DB] shadow-xs'
-                          : 'bg-white border-[#D8DEEA]/60 hover:bg-[#f0f3ff]/40'
-                        }`}
+                      className={`p-3.5 rounded-[16px] cursor-pointer transition flex flex-col gap-1.5 border ${
+                        isSelected
+                          ? 'bg-[#f0f3ff] border-[#83A2DB] shadow-xs ring-1 ring-[#83A2DB]/40'
+                          : 'bg-white border-[#D8DEEA]/60 hover:bg-[#f0f3ff]/40 hover:border-[#83A2DB]/40'
+                      }`}
                     >
-                      <div>
-                        <div className="font-semibold text-xs text-[#10141A]">{r.name}</div>
-                        <div className="font-mono text-[10px] text-[#6B7280]">{r.code}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="font-semibold text-xs text-[#10141A] truncate">{r.name}</div>
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-white border border-[#D8DEEA] text-[#6B7280] shrink-0">
+                          {r.user_count} {parseInt(r.user_count) === 1 ? 'User' : 'Users'}
+                        </span>
                       </div>
-                      <span className="font-mono text-[10px] text-[#9CA3AF]">{r.user_count} Users</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-[10px] text-[#3f5e93] font-bold">{r.code}</span>
+                        {r.is_system_role && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                            System
+                          </span>
+                        )}
+                      </div>
+                      {r.description && (
+                        <p className="text-[11px] text-[#6B7280] line-clamp-1">{r.description}</p>
+                      )}
                     </div>
                   );
                 })}
@@ -1192,70 +1270,180 @@ export default function AdministrationView({
 
             {/* Permissions Matrix */}
             <div className="lg:col-span-8 bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-[#D8DEEA]/60">
+              {/* Header */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between pb-3 border-b border-[#D8DEEA]/60 gap-3">
                 <div>
-                  <div className="text-xs font-semibold text-[#10141A] uppercase tracking-wider">
-                    Permissions: {selectedRole?.name || 'Select Role'}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-[#10141A] uppercase tracking-wider">
+                      Role Privileges:
+                    </span>
+                    <span className="font-bold text-sm text-[#10141A]">
+                      {selectedRole?.name || 'Select a Role'}
+                    </span>
+                    {selectedRole && (
+                      <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#f0f3ff] text-[#3f5e93] border border-[#83A2DB]/40">
+                        {selectedRole.code}
+                      </span>
+                    )}
+                    <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      {rolePermissionsState.length} / {permissions.length} Enabled
+                    </span>
                   </div>
-                  <div className="text-[11px] text-[#6B7280]">{selectedRole?.description}</div>
+                  <p className="text-[11px] text-[#6B7280] mt-1">
+                    {selectedRole?.description || 'Assign privileges across organizational modules and security controls.'}
+                  </p>
                 </div>
-                <button
-                  onClick={handleSaveRolePermissions}
-                  disabled={savingPermissions || !selectedRole}
-                  className="px-4 py-1.5 bg-[#000000] text-white rounded-full text-xs font-medium hover:bg-[#181c22] transition shadow-xs disabled:opacity-40"
-                >
-                  {savingPermissions ? 'Saving...' : 'Save Permissions'}
-                </button>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {selectedRole && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleSelectAllFilteredPermissions}
+                        className="px-2.5 py-1 text-[11px] font-medium text-[#3f5e93] bg-[#f0f3ff] hover:bg-[#e0e8f7] rounded-full border border-[#D8DEEA] transition cursor-pointer"
+                        title="Enable all permissions matching current filter"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeselectAllFilteredPermissions}
+                        className="px-2.5 py-1 text-[11px] font-medium text-[#6B7280] hover:text-[#10141A] hover:bg-slate-100 rounded-full border border-[#D8DEEA] transition cursor-pointer"
+                        title="Clear permissions matching current filter"
+                      >
+                        Clear
+                      </button>
+                    </>
+                  )}
+                  <button
+                    onClick={handleSaveRolePermissions}
+                    disabled={savingPermissions || !selectedRole}
+                    className="px-4 py-1.5 bg-[#000000] text-white rounded-full text-xs font-medium hover:bg-[#181c22] transition shadow-xs disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">
+                      {savingPermissions ? 'sync' : 'verified_user'}
+                    </span>
+                    <span>{savingPermissions ? 'Saving...' : 'Save Permissions'}</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[500px] overflow-y-auto pr-1">
-                {permissions.map((p) => {
-                  const isChecked = rolePermissionsState.includes(p.id);
-                  const isBlockchain = p.code.startsWith('BLOCKCHAIN');
-                  return (
-                    <label
-                      key={p.id}
-                      className={`p-3 rounded-[16px] border flex items-start gap-2.5 cursor-pointer transition ${
-                        isChecked
-                          ? isBlockchain
-                            ? 'bg-cyan-500/10 border-cyan-400/50 shadow-xs'
-                            : 'bg-[#f0f3ff] border-[#83A2DB]/50 shadow-xs'
-                          : 'bg-white border-[#D8DEEA]/60 hover:bg-[#f0f3ff]/40'
-                      }`}
+              {/* Search & Category Filter Bar */}
+              <div className="space-y-2.5">
+                <div className="relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] text-[16px]">
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Filter permissions by code or description..."
+                    value={permissionSearch}
+                    onChange={(e) => setPermissionSearch(e.target.value)}
+                    className="w-full pl-9 pr-8 py-1.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs placeholder:text-[#9CA3AF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
+                  />
+                  {permissionSearch && (
+                    <button
+                      onClick={() => setPermissionSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#10141A]"
                     >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setRolePermissionsState([...rolePermissionsState, p.id]);
-                          } else {
-                            setRolePermissionsState(rolePermissionsState.filter((id) => id !== p.id));
-                          }
-                        }}
-                        className="mt-0.5 w-3.5 h-3.5 text-[#3f5e93] rounded"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-semibold text-xs text-[#10141A] font-mono">{p.code}</span>
-                          {p.category && (
-                            <span
-                              className={`text-[9px] font-semibold px-2 py-0.2 rounded-full ${
-                                isBlockchain
-                                  ? 'bg-cyan-100 text-cyan-900 border border-cyan-300 font-bold'
-                                  : 'bg-[#f0f3ff] text-[#45474b] border border-[#D8DEEA]'
-                              }`}
-                            >
-                              {p.category}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-[#6B7280] mt-0.5">{p.description}</div>
-                      </div>
-                    </label>
-                  );
-                })}
+                      <span className="material-symbols-outlined text-[14px]">close</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Filter Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs scrollbar-none">
+                  {permissionCategories.map((cat) => {
+                    const isCatSelected = permissionCategoryFilter === cat;
+                    const count =
+                      cat === 'ALL'
+                        ? permissions.length
+                        : permissions.filter((p) => p.category === cat).length;
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => setPermissionCategoryFilter(cat)}
+                        className={`px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+                          isCatSelected
+                            ? 'bg-[#10141A] text-white shadow-xs'
+                            : 'bg-[#f0f3ff] text-[#45474b] hover:bg-[#e4ebf7] border border-[#D8DEEA]/60'
+                        }`}
+                      >
+                        <span>{cat === 'ALL' ? 'All Modules' : cat}</span>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.2 rounded-full font-mono ${
+                            isCatSelected
+                              ? 'bg-white/20 text-white'
+                              : 'bg-white text-[#6B7280] border border-[#D8DEEA]'
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* Permissions Grid */}
+              {filteredPermissions.length === 0 ? (
+                <div className="py-12 text-center text-[#6B7280] bg-[#f0f3ff]/40 rounded-[18px] border border-dashed border-[#D8DEEA]">
+                  <span className="material-symbols-outlined text-[32px] text-[#9CA3AF]">search_off</span>
+                  <p className="text-xs font-semibold mt-1">No matching permissions found</p>
+                  <p className="text-[11px] text-[#9CA3AF]">Try adjusting your search query or module category filter.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-[480px] overflow-y-auto pr-1">
+                  {filteredPermissions.map((p) => {
+                    const isChecked = rolePermissionsState.includes(p.id);
+                    const isBlockchain = p.code.startsWith('BLOCKCHAIN');
+                    return (
+                      <label
+                        key={p.id}
+                        className={`p-3.5 rounded-[16px] border flex items-start gap-2.5 cursor-pointer transition select-none ${
+                          isChecked
+                            ? isBlockchain
+                              ? 'bg-cyan-500/10 border-cyan-400/50 shadow-xs'
+                              : 'bg-[#f0f3ff] border-[#83A2DB]/70 shadow-xs'
+                            : 'bg-white border-[#D8DEEA]/60 hover:bg-[#f0f3ff]/40 hover:border-[#83A2DB]/40'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setRolePermissionsState([...rolePermissionsState, p.id]);
+                            } else {
+                              setRolePermissionsState(rolePermissionsState.filter((id) => id !== p.id));
+                            }
+                          }}
+                          className="mt-0.5 w-3.5 h-3.5 text-[#3f5e93] rounded border-gray-300 focus:ring-[#3f5e93] cursor-pointer shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-xs text-[#10141A] font-mono tracking-tight truncate">
+                              {p.code}
+                            </span>
+                            {p.category && (
+                              <span
+                                className={`shrink-0 whitespace-nowrap text-[10px] font-semibold px-2 py-0.5 rounded-full border ${getPermissionBadgeStyle(
+                                  p.category
+                                )}`}
+                              >
+                                {p.category}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-[#6B7280] mt-1 leading-normal line-clamp-2">
+                            {p.description}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
