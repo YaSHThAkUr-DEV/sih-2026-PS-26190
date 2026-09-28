@@ -786,7 +786,7 @@ export default function OrganizationsManagementView({
                 { id: 'departments', label: `Departments (${orgDetails?.departments?.length || 0})`, icon: 'corporate_fare' },
                 { id: 'users', label: `Officers & Clearance (${orgDetails?.users?.length || 0})`, icon: 'manage_accounts' },
                 { id: 'vault', label: `Document Vault (${orgDetails?.documents?.length || 0})`, icon: 'folder' },
-                { id: 'exchanges', label: `Exchanges & Audits (${(orgDetails?.inboundRequests?.length || 0) + (orgDetails?.outboundRequests?.length || 0)})`, icon: 'sync_alt' },
+                { id: 'exchanges', label: `Exchanges & Audits (${(orgDetails?.inboundRequests?.length || 0) + (orgDetails?.outboundRequests?.length || 0) + (orgDetails?.auditLogs?.length || 0)})`, icon: 'sync_alt' },
               ].map((sub) => (
                 <button
                   key={sub.id}
@@ -1292,6 +1292,75 @@ export default function OrganizationsManagementView({
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
                                   {r.status}
                                 </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Institutional Administrative & Security Audit Trail */}
+                <div className="bg-white rounded-[20px] p-5 border border-[#D8DEEA]/80 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-sm text-[#10141A] flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#3f5e93] text-[18px]">verified_user</span>
+                      <span>Institutional Administrative &amp; Security Audit Trail</span>
+                    </h3>
+                    <span className="text-[11px] font-mono text-[#6B7280] font-semibold">
+                      {orgDetails.auditLogs?.length || 0} Chained Events
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-[#f0f3ff]/60 text-[#6B7280] text-[10px] font-bold uppercase tracking-wider">
+                        <tr>
+                          <th className="py-2.5 px-3">Timestamp</th>
+                          <th className="py-2.5 px-3">Actor</th>
+                          <th className="py-2.5 px-3">Event Type</th>
+                          <th className="py-2.5 px-3">Resource</th>
+                          <th className="py-2.5 px-3">Result</th>
+                          <th className="py-2.5 px-3">Event Hash</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#D8DEEA]/40">
+                        {(!orgDetails.auditLogs || orgDetails.auditLogs.length === 0) ? (
+                          <tr>
+                            <td colSpan={6} className="py-6 text-center text-[#6B7280]">
+                              No administrative audit events recorded for this organization yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          orgDetails.auditLogs.map((log: any, idx: number) => (
+                            <tr key={`org-audit-${log.id || idx}`} className="hover:bg-[#f0f3ff]/40">
+                              <td className="py-2.5 px-3 font-mono text-[#6B7280] whitespace-nowrap">
+                                {new Date(log.createdAt).toLocaleString()}
+                              </td>
+                              <td className="py-2.5 px-3 font-semibold text-[#10141A]">
+                                <div>{log.actorName || 'System Administrator'}</div>
+                                {log.actorDesignation && (
+                                  <div className="text-[10px] font-normal text-[#6B7280]">{log.actorDesignation}</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 font-mono font-bold text-[#3f5e93]">
+                                {log.eventType}
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-[#45474b]">
+                                {log.resourceType || 'ORGANIZATION'}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  log.result === 'SUCCESS'
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                                }`}>
+                                  {log.result}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 font-mono text-[10px] text-[#9CA3AF]">
+                                {log.eventHash ? `${log.eventHash.substring(0, 12)}...` : 'SHA-256 Valid'}
                               </td>
                             </tr>
                           ))

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { provisionOfficeInstance } from '@/lib/service/provisioning';
+import { getCurrentSession } from '@/lib/auth/jwt';
 import {
   DEFAULT_FULL_FEATURES,
   MINIMAL_RECEIPTS_FEATURES,
@@ -48,6 +49,7 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
   try {
+    const session = await getCurrentSession(req);
     const body = await req.json();
 
     if (!body.officeName || !body.officeCode) {
@@ -64,6 +66,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || '127.0.0.1';
+    const userAgent = req.headers.get('user-agent') || 'DMS-Service-Provisioner/2.0';
+
     const result = await provisionOfficeInstance({
       officeName: body.officeName,
       officeCode: body.officeCode,
@@ -71,6 +76,10 @@ export async function POST(req: NextRequest) {
       features: body.features,
       departments: body.departments,
       documentTypes: body.documentTypes,
+      creatorUserId: session?.userId,
+      creatorOrgId: session?.organizationId,
+      ipAddress,
+      userAgent,
       adminUser: {
         fullName: body.adminUser.fullName || `${body.officeName} Admin`,
         email: body.adminUser.email,

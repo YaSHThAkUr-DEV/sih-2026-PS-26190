@@ -48,6 +48,8 @@ export async function GET(req: NextRequest) {
       nodeStatus: 'ONLINE / SYNCHRONIZED',
     };
 
+    const isSuper = session.roles?.includes('SUPER_ADMIN');
+
     const recentAdminAudits = await query(
       `SELECT 
          ae.id,
@@ -58,18 +60,21 @@ export async function GET(req: NextRequest) {
          ae.ip_address,
          ae.resource_type,
          ae.event_metadata,
-         u.full_name as actor_name,
-         u.email as actor_email
+         coalesce(u.full_name, 'System Administrator') as actor_name,
+         coalesce(u.email, 'admin@system.local') as actor_email
        FROM audit_events ae
        LEFT JOIN users u ON ae.actor_id = u.id
-       WHERE ae.organization_id = $1 AND (
+       WHERE (${isSuper ? '1=1' : 'ae.organization_id = $1 OR ae.resource_id = $1'}) AND (
          ae.event_type LIKE 'ADMIN_%' OR 
          ae.event_type LIKE '%ADMIN%' OR 
-         ae.resource_type IN ('USER', 'DEPARTMENT', 'TEAM', 'ROLE', 'DOCUMENT_TYPE', 'SECURITY_LEVEL', 'DEPARTMENT_POLICY', 'SYSTEM_CONFIG', 'ADMIN_CONSOLE')
+         ae.event_type LIKE '%PROVISION%' OR
+         ae.event_type LIKE '%INITIALIZ%' OR
+         ae.event_type LIKE '%ORG%' OR
+         ae.resource_type IN ('USER', 'DEPARTMENT', 'TEAM', 'ROLE', 'DOCUMENT_TYPE', 'SECURITY_LEVEL', 'DEPARTMENT_POLICY', 'SYSTEM_CONFIG', 'ADMIN_CONSOLE', 'ORGANIZATION', 'OFFICE')
        )
        ORDER BY ae.created_at DESC
-       LIMIT 30`,
-      [session.organizationId]
+       LIMIT 40`,
+      isSuper ? [] : [session.organizationId]
     );
 
     return NextResponse.json({

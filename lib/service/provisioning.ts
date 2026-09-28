@@ -14,6 +14,10 @@ export interface ProvisionOfficeRequest {
   features?: Partial<OrganizationFeatureConfig>;
   departments?: Array<{ name: string; code: string }>;
   documentTypes?: Array<{ name: string; code: string; description?: string }>;
+  creatorUserId?: string;
+  creatorOrgId?: string;
+  ipAddress?: string;
+  userAgent?: string;
   adminUser: {
     fullName: string;
     email: string;
@@ -205,25 +209,46 @@ export async function provisionOfficeInstance(req: ProvisionOfficeRequest): Prom
       [adminUser.id, adminRoleId]
     );
 
-    // 9. Emit Initial Audit Event
+    // 9. Emit Initial Audit Event with cryptographic tamper-evident hash
+    const metadataObj = {
+      officeName: req.officeName,
+      officeCode: cleanCode,
+      activeFeatures,
+      departmentsInitialized: Object.keys(deptMap).length,
+      documentTypesCount: docTypesCount,
+      adminEmail: req.adminUser.email,
+      timestamp: new Date().toISOString(),
+    };
+    const metadataJson = JSON.stringify(metadataObj);
+
+    const hashPayload = `${orgId}:ADMIN_ORGANIZATION_INITIALIZED:${req.creatorUserId || adminUser.id}:SUCCESS:${Date.now()}:${metadataJson}`;
+    const crypto = await import('crypto');
+    const eventHash = crypto.createHash('sha256').update(hashPayload).digest('hex');
+
+    const clientIp = req.ipAddress || '127.0.0.1';
+    const clientAgent = req.userAgent || 'DMS-Service-Provisioner/2.0';
+
+    // Insert for newly created organization
     await client.query(
       `INSERT INTO audit_events (
-        organization_id, actor_id, event_type, resource_type, result, ip_address, user_agent, event_metadata
+        organization_id, actor_id, event_type, resource_type, resource_id, result, ip_address, user_agent, event_metadata, event_hash
        )
-       VALUES ($1, $2, 'OFFICE_INSTANCE_PROVISIONED', 'ORGANIZATION', 'SUCCESS', '127.0.0.1', 'DMS-Service-Provisioner/2.0', $3);`,
-      [
-        orgId,
-        adminUser.id,
-        JSON.stringify({
-          officeName: req.officeName,
-          officeCode: cleanCode,
-          activeFeatures,
-          departmentsInitialized: Object.keys(deptMap).length,
-          documentTypesCount: docTypesCount,
-          timestamp: new Date().toISOString(),
-        }),
-      ]
+       VALUES ($1, $2, 'ADMIN_ORGANIZATION_INITIALIZED', 'ORGANIZATION', $1, 'SUCCESS', $3, $4, $5, $6);`,
+      [orgId, req.creatorUserId || adminUser.id, clientIp, clientAgent, metadataJson, eventHash]
     );
+
+    // If an existing administrator from another organization performed the provisioning, record audit event for creator's org
+    if (req.creatorOrgId && req.creatorOrgId !== orgId) {
+      const creatorPayload = `${req.creatorOrgId}:ADMIN_ORGANIZATION_INITIALIZED:${req.creatorUserId}:SUCCESS:${Date.now()}:${metadataJson}`;
+      const creatorHash = crypto.createHash('sha256').update(creatorPayload).digest('hex');
+      await client.query(
+        `INSERT INTO audit_events (
+          organization_id, actor_id, event_type, resource_type, resource_id, result, ip_address, user_agent, event_metadata, event_hash
+         )
+         VALUES ($1, $2, 'ADMIN_ORGANIZATION_INITIALIZED', 'ORGANIZATION', $3, 'SUCCESS', $4, $5, $6, $7);`,
+        [req.creatorOrgId, req.creatorUserId, orgId, clientIp, clientAgent, metadataJson, creatorHash]
+      );
+    }
 
     await client.query('COMMIT');
 

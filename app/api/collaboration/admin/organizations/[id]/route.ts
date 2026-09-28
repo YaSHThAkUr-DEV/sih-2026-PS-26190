@@ -248,13 +248,15 @@ export async function GET(
         a.created_at as "createdAt",
         a.ip_address as "ipAddress",
         a.resource_type as "resourceType",
-        u.full_name as "actorName",
-        u.designation as "actorDesignation"
+        a.event_hash as "eventHash",
+        a.event_metadata as "eventMetadata",
+        coalesce(u.full_name, 'System Administrator') as "actorName",
+        coalesce(u.designation, 'Institutional Officer') as "actorDesignation"
       FROM audit_events a
       LEFT JOIN users u ON a.actor_id = u.id
-      WHERE a.organization_id = $1
+      WHERE a.organization_id = $1 OR a.resource_id = $1
       ORDER BY a.created_at DESC
-      LIMIT 25
+      LIMIT 50
       `,
       [orgId]
     );

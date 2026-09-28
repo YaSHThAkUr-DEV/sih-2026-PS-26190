@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(50, Math.max(5, parseInt(searchParams.get('limit') || '15', 10)));
     const offset = (page - 1) * limit;
 
+    const isSuper = session.roles?.includes('SUPER_ADMIN');
+
     let sql = `
       SELECT 
         ae.id,
@@ -45,10 +47,10 @@ export async function GET(req: NextRequest) {
       LEFT JOIN departments dep ON u.department_id = dep.id
       LEFT JOIN documents d ON ae.document_id = d.id
       LEFT JOIN document_versions dv ON ae.document_version_id = dv.id
-      WHERE ae.organization_id = $1
+      WHERE (${isSuper ? '1=1' : 'ae.organization_id = $1 OR ae.resource_id = $1'})
     `;
 
-    const params: any[] = [session.organizationId];
+    const params: any[] = isSuper ? [] : [session.organizationId];
 
     // Department Filter
     if (department && department !== 'all') {
@@ -79,7 +81,7 @@ export async function GET(req: NextRequest) {
       } else if (eventType === 'RETENTION') {
         sql += ` AND (ae.event_type LIKE '%RETENTION%' OR ae.event_type LIKE '%HOLD%' OR ae.event_type LIKE '%DELETE%' OR ae.event_type LIKE '%DISPOSAL%' OR ae.event_type LIKE '%SHRED%')`;
       } else if (eventType === 'ADMIN') {
-        sql += ` AND (ae.event_type LIKE '%USER%' OR ae.event_type LIKE '%ROLE%' OR ae.event_type LIKE '%POLICY%' OR ae.event_type LIKE '%DEPT%' OR ae.event_type LIKE '%ORG%')`;
+        sql += ` AND (ae.event_type LIKE '%USER%' OR ae.event_type LIKE '%ROLE%' OR ae.event_type LIKE '%POLICY%' OR ae.event_type LIKE '%DEPT%' OR ae.event_type LIKE '%ORG%' OR ae.event_type LIKE '%PROVISION%' OR ae.event_type LIKE '%INITIALIZ%')`;
       } else {
         params.push(`%${eventType}%`);
         sql += ` AND ae.event_type ILIKE $${params.length}`;
