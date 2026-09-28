@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 interface UserRecord {
   id: string;
@@ -457,14 +458,13 @@ export default function UsersManagementView({
             
             {/* Filter Bar */}
             <div className="bg-white rounded-[20px] p-4 shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 flex flex-col md:flex-row items-center justify-between gap-3">
-              <div className="relative w-full md:w-80">
-                <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#9CA3AF] text-[16px]">search</span>
-                <input
-                  type="text"
+              <div className="w-full md:w-80">
+                <UiverseSearchBar
                   placeholder="Search name, email, employee ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-9 pr-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] placeholder:text-[#9CA3AF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
+                  onClear={() => setSearchQuery('')}
+                  compact
                 />
               </div>
 

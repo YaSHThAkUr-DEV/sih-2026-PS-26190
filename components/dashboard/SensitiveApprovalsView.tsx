@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 interface ApprovalsViewProps {
   currentUser: any;
@@ -295,14 +296,13 @@ export default function SensitiveApprovalsView({
         </div>
 
         {/* Search Input */}
-        <div className="relative flex items-center min-w-[260px]">
-          <span className="material-symbols-outlined absolute left-3 text-[#9CA3AF] text-[18px]">search</span>
-          <input
-            type="text"
+        <div className="min-w-[260px]">
+          <UiverseSearchBar
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Filter docket, officer, digest..."
-            className="w-full h-9 pl-9 pr-3 bg-[#f0f3ff] border border-[#D8DEEA] text-xs text-[#151c27] placeholder:text-[#9CA3AF] rounded-full focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
+            onClear={() => setSearchQuery('')}
+            compact
           />
         </div>
       </div>

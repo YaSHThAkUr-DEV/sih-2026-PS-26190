@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { SearchResultItem } from './GlobalSearchModal';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 interface OcrIntelligenceViewProps {
   initialQuery?: string;
@@ -76,8 +77,8 @@ export function OcrIntelligenceView({
     executeSearch(query, tierFilter, docTypeFilter);
   }, [tierFilter, docTypeFilter, executeSearch]);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     executeSearch(query, tierFilter, docTypeFilter);
   };
 
@@ -267,29 +268,18 @@ export function OcrIntelligenceView({
       {/* 2. Search Studio & Filters Bar */}
       <div className="bg-white rounded-[24px] border border-[#D8DEEA]/80 shadow-[0_2px_12px_rgba(16,20,26,0.03)] p-4 flex flex-col gap-3">
         <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-col sm:flex-row items-center">
-          <div className="relative flex-1 w-full">
-            <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] text-[18px]">
-              search
-            </span>
-            <input
+          <div className="flex-1 w-full">
+            <UiverseSearchBar
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search extracted text keywords, clauses, case docket numbers, custodian names..."
-              className="w-full h-10 pl-10 pr-9 bg-[#f0f3ff] border border-[#D8DEEA] text-xs text-[#151c27] placeholder:text-[#9CA3AF] rounded-full focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93] font-medium transition"
+              onClear={() => {
+                setQuery('');
+                executeSearch('', tierFilter, docTypeFilter);
+              }}
+              onSubmit={handleSearchSubmit}
             />
-            {query && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery('');
-                  executeSearch('', tierFilter, docTypeFilter);
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-[#151c27] cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">close</span>
-              </button>
-            )}
           </div>
 
           <button
@@ -740,27 +730,19 @@ export function OcrIntelligenceView({
 
                 {/* In-Text Search Input */}
                 <div className="relative">
-                  <input
-                    type="text"
+                  <UiverseSearchBar
                     placeholder="Search inside extracted OCR text..."
                     value={ocrTextSearch}
                     onChange={(e) => setOcrTextSearch(e.target.value)}
-                    className="w-full h-8 pl-8 pr-20 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#3f5e93]"
+                    onClear={() => setOcrTextSearch('')}
+                    compact
+                    className={ocrTextSearch ? 'pr-24' : ''}
                   />
-                  <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] text-[15px]">
-                    search
-                  </span>
                   {ocrTextSearch && (
-                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 bg-white rounded border border-[#D8DEEA] text-[#3f5e93]">
+                    <div className="absolute right-7 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 bg-white rounded border border-[#D8DEEA] text-[#3f5e93] shadow-2xs">
                         {ocrMatchesCount} {ocrMatchesCount === 1 ? 'match' : 'matches'}
                       </span>
-                      <button
-                        onClick={() => setOcrTextSearch('')}
-                        className="text-[#9CA3AF] hover:text-[#151c27]"
-                      >
-                        <span className="material-symbols-outlined text-[13px]">close</span>
-                      </button>
                     </div>
                   )}
                 </div>

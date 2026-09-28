@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 // =============================================================================
 // INTER-ORGANIZATION COLLABORATION HIGHWAY COMPONENT
@@ -133,6 +134,21 @@ export default function InterOrgExchangeView({
       return o.id !== currentOrg.id && o.code !== currentOrg.code;
     });
   }, [directoryOrgs, currentOrg]);
+
+  // Filter directory orgs based on searchQuery
+  const filteredDirectoryOrgs = useMemo(() => {
+    if (!searchQuery.trim()) return directoryOrgs;
+    const q = searchQuery.toLowerCase().trim();
+    return directoryOrgs.filter(
+      (o) =>
+        o.name?.toLowerCase().includes(q) ||
+        o.code?.toLowerCase().includes(q) ||
+        o.agencyCode?.toLowerCase().includes(q) ||
+        o.nodalOfficerName?.toLowerCase().includes(q) ||
+        o.tierName?.toLowerCase().includes(q) ||
+        o.categoryName?.toLowerCase().includes(q)
+    );
+  }, [directoryOrgs, searchQuery]);
 
   // Dynamic Taxonomies
   const [taxonomies, setTaxonomies] = useState<any>({
@@ -964,26 +980,23 @@ export default function InterOrgExchangeView({
         {activeTab === 'directory' && (
           <div className="space-y-4">
             <div className="bg-white rounded-[20px] p-4 border border-[#D8DEEA]/80 shadow-xs flex items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-md">
-                <span className="material-symbols-outlined absolute left-3 top-2 text-[#9CA3AF] text-[18px]">
-                  search
-                </span>
-                <input
-                  type="text"
+              <div className="flex-1 max-w-md">
+                <UiverseSearchBar
                   placeholder="Search government bodies, courts, enforcement agencies..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-1.5 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none"
+                  onClear={() => setSearchQuery('')}
+                  compact
                 />
               </div>
 
               <span className="text-xs text-[#6B7280]">
-                Showing <b>{directoryOrgs.length}</b> verified government nodes
+                Showing <b>{filteredDirectoryOrgs.length}</b> verified government nodes
               </span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {directoryOrgs.map((org, idx) => (
+              {filteredDirectoryOrgs.map((org, idx) => (
                 <div
                   key={`org-dir-${org.id}-${idx}`}
                   className="bg-white rounded-[22px] p-5 border border-[#D8DEEA]/80 shadow-xs flex flex-col justify-between gap-3 hover:border-[#83A2DB]/50 transition"

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { ServiceSetupModal } from './ServiceSetupModal';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 interface OrganizationsManagementViewProps {
   currentUserId?: string;
@@ -339,16 +340,6 @@ export default function OrganizationsManagementView({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            {canManageFleet && (
-              <button
-                onClick={() => setSetupModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#000000] text-white hover:bg-[#181c22] text-xs font-semibold transition shadow-[0_4px_12px_rgba(16,20,26,0.22)] cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">domain_add</span>
-                <span>Onboard New Entity</span>
-              </button>
-            )}
-
             <button
               onClick={fetchFleetData}
               disabled={loading}
@@ -464,14 +455,13 @@ export default function OrganizationsManagementView({
           <div className="space-y-4">
             {/* Filter and Search Bar */}
             <div className="bg-white rounded-[20px] p-4 border border-[#D8DEEA]/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-md">
-                <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#9CA3AF] text-[16px]">search</span>
-                <input
-                  type="text"
+              <div className="flex-1 max-w-md">
+                <UiverseSearchBar
                   placeholder="Search agency name, org code (e.g. MH-HC-BOM, DL-POL-NZ), nodal officer..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-9 pr-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] placeholder:text-[#9CA3AF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
+                  onClear={() => setSearchQuery('')}
+                  compact
                 />
               </div>
 

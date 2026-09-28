@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 interface UserProfileDossierModalProps {
   userId: string;
@@ -294,20 +295,20 @@ export function UserProfileDossierModal({
                   </div>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="text"
+                <div className="w-full sm:w-60">
+                  <UiverseSearchBar
                     value={searchTerm}
                     onChange={(e) => {
                       setSearchTerm(e.target.value);
                       setPage(1);
                     }}
                     placeholder="Search action or docket..."
-                    className="pl-8 pr-3 py-1.5 text-xs bg-white border border-[#D8DEEA] rounded-full text-[#151c27] placeholder:text-[#9CA3AF] focus:outline-none focus:ring-1 focus:ring-[#3f5e93] w-full sm:w-56"
+                    onClear={() => {
+                      setSearchTerm('');
+                      setPage(1);
+                    }}
+                    compact
                   />
-                  <span className="material-symbols-outlined absolute left-2.5 top-2 text-[15px] text-[#9CA3AF]">
-                    search
-                  </span>
                 </div>
               </div>
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 interface QueueMetrics {
   waiting: number;
@@ -622,17 +623,14 @@ export default function JobQueuesView() {
             </select>
 
             {/* Search Input */}
-            <div className="relative">
-              <input
-                type="text"
+            <div className="w-52">
+              <UiverseSearchBar
                 placeholder="Search job ID / docket..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="text-xs pl-8 pr-3 py-1.5 bg-white border border-[#D8DEEA] rounded-full text-[#151c27] placeholder:text-[#9CA3AF] focus:outline-none w-48"
+                onClear={() => setSearchQuery('')}
+                compact
               />
-              <span className="material-symbols-outlined text-[15px] text-[#9CA3AF] absolute left-2.5 top-2">
-                search
-              </span>
             </div>
           </div>
         </div>

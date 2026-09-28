@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 interface NotificationItem {
   id: string;
@@ -107,12 +108,13 @@ export default function NotificationsView({ onNavigateTab, onInspectDocument, on
   });
 
   // Fetch notifications
-  const loadNotifications = async () => {
+  const loadNotifications = async (overrideSearch?: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (activeCategory !== 'all') params.set('category', activeCategory);
-      if (searchQuery) params.set('search', searchQuery);
+      const effectiveSearch = overrideSearch !== undefined ? overrideSearch : searchQuery;
+      if (effectiveSearch) params.set('search', effectiveSearch);
       if (sortOption) params.set('sort', sortOption);
 
       const res = await fetch(`/api/notifications?${params.toString()}`);
@@ -401,15 +403,17 @@ export default function NotificationsView({ onNavigateTab, onInspectDocument, on
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="relative flex items-center min-w-[220px] flex-1">
-              <span className="material-symbols-outlined absolute left-3 text-[#9CA3AF] text-[16px]">search</span>
-              <input
-                type="text"
+            <div className="min-w-[220px] flex-1">
+              <UiverseSearchBar
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && loadNotifications()}
+                onSubmit={() => loadNotifications()}
                 placeholder="Search notices, docket, or signer..."
-                className="w-full h-8 pl-9 pr-3 rounded-full bg-[#f0f3ff] border border-[#D8DEEA] text-xs text-[#151c27] placeholder:text-[#9CA3AF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
+                onClear={() => {
+                  setSearchQuery('');
+                  loadNotifications('');
+                }}
+                compact
               />
             </div>
             <select

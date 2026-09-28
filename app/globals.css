@@ -537,3 +537,106 @@ mark {
   pointer-events: none;
   z-index: 20;
 }
+
+/* ========================================================================== */
+/* UIVERSE SEARCH BAR (Themed to NIRMAN Institutional Design System)          */
+/* ========================================================================== */
+.uiverse-search-group {
+  display: flex;
+  line-height: 28px;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+.uiverse-search-input {
+  height: 40px;
+  line-height: 28px;
+  padding: 0 1rem;
+  width: 100%;
+  padding-left: 2.5rem;
+  padding-right: 2.25rem;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  outline: none;
+  background-color: #f0f3ff;
+  color: #10141A;
+  box-shadow: 0 0 4px #c6d6f5, 0 0 0 5px #f6f8fe;
+  transition: all 0.3s ease;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.uiverse-search-input::placeholder {
+  color: #8493a8;
+  font-weight: 400;
+}
+
+.uiverse-search-input:hover {
+  background-color: #e5eeff;
+  border-color: #c0d3f8;
+  box-shadow: 0 0 6px #b4cbfa, 0 0 0 5px #eff4ff;
+}
+
+.uiverse-search-input:focus {
+  outline: none;
+  background-color: #ffffff;
+  border-color: #3f5e93;
+  color: #10141A;
+  box-shadow: 0 0 8px rgba(63, 94, 147, 0.25), 0 0 0 4px rgba(220, 233, 255, 0.85);
+}
+
+.uiverse-search-icon {
+  position: absolute;
+  left: 1rem;
+  fill: #64748B;
+  width: 1rem;
+  height: 1rem;
+  pointer-events: none;
+  z-index: 1;
+  transition: fill 0.3s ease, transform 0.3s ease;
+}
+
+.uiverse-search-group:focus-within .uiverse-search-icon {
+  fill: #3f5e93;
+  transform: scale(1.08);
+}
+
+.uiverse-search-clear {
+  position: absolute;
+  right: 0.75rem;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.uiverse-search-clear:hover {
+  color: #10141A;
+  background-color: rgba(63, 94, 147, 0.12);
+}
+
+.uiverse-search-input.compact {
+  height: 34px;
+  line-height: 24px;
+  font-size: 12px;
+  padding-left: 2.25rem;
+  border-radius: 10px;
+  box-shadow: 0 0 3px #c6d6f5, 0 0 0 4px #f6f8fe;
+}
+
+.uiverse-search-input.compact + .uiverse-search-icon,
+.uiverse-search-group .uiverse-search-input.compact ~ .uiverse-search-icon {
+  left: 0.75rem;
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+

@@ -22,6 +22,7 @@ import FederationAuditView from '@/components/dashboard/FederationAuditView';
 import FederationAdminView from '@/components/dashboard/FederationAdminView';
 import OrganizationsManagementView from '@/components/dashboard/OrganizationsManagementView';
 import { SquareLoader } from '@/components/ui/SquareLoader';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 import dynamic from 'next/dynamic';
 
 const ShaderGradientBackground = dynamic(
@@ -1041,27 +1042,16 @@ export default function DashboardPage() {
                 {/* Search & Filter Bar */}
                 <div className="p-5 border-b border-[#D8DEEA]/60 bg-[#f0f3ff]/30 flex flex-col gap-3">
                   <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-                    <form onSubmit={handleSearchSubmit} className="relative flex-1">
-                      <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#9CA3AF] text-[18px]">search</span>
-                      <input
-                        type="text"
+                    <form onSubmit={handleSearchSubmit} className="flex-1">
+                      <UiverseSearchBar
                         placeholder="Search document #, title, description, or officer..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full h-10 pl-9 pr-9 bg-white border border-[#D8DEEA] text-xs text-[#151c27] placeholder:text-[#9CA3AF] rounded-full focus:outline-none focus:ring-2 focus:ring-[#3f5e93] font-medium"
+                        onClear={() => {
+                          setSearchQuery('');
+                          fetchDocuments(1, activeTypeFilter, selectedTierFilter, '');
+                        }}
                       />
-                      {searchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSearchQuery('');
-                            fetchDocuments(1, activeTypeFilter, selectedTierFilter, '');
-                          }}
-                          className="absolute right-3 top-3 text-[#9CA3AF] hover:text-[#151c27]"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">close</span>
-                        </button>
-                      )}
                     </form>
 
                     <div className="flex items-center gap-3 shrink-0 flex-wrap">

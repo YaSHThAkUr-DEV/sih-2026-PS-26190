@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import OrganizationsManagementView from '@/components/dashboard/OrganizationsManagementView';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 import dynamic from 'next/dynamic';
 
 const ShaderGradientBackground = dynamic(
@@ -435,14 +436,13 @@ export default function FederationAdminStandalonePage() {
           <div className="space-y-6">
             {/* Filter and Quick Search */}
             <div className="bg-white rounded-[20px] p-4 border border-[#D8DEEA]/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-              <div className="relative flex-1 max-w-md">
-                <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#9CA3AF] text-[16px]">search</span>
-                <input
-                  type="text"
+              <div className="flex-1 max-w-md">
+                <UiverseSearchBar
                   placeholder="Filter by officer name, email, designation, or agency..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-8 pl-9 pr-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] placeholder:text-[#9CA3AF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
+                  onClear={() => setSearchQuery('')}
+                  compact
                 />
               </div>
 

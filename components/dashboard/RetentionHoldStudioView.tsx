@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { UiverseSearchBar } from '@/components/ui/UiverseSearchBar';
 
 interface RetentionPolicy {
   id: string;
@@ -215,11 +216,12 @@ export default function RetentionHoldStudioView({
   };
 
   // Fetch records
-  const loadRecords = async () => {
+  const loadRecords = async (overrideSearch?: string) => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (searchQuery) params.set('search', searchQuery);
+      const effectiveSearch = overrideSearch !== undefined ? overrideSearch : searchQuery;
+      if (effectiveSearch) params.set('search', effectiveSearch);
       if (classificationFilter !== 'all') params.set('classification', classificationFilter);
       if (holdFilter !== 'all-holds') params.set('holdState', holdFilter);
       if (sortOption) params.set('sort', sortOption);
@@ -685,15 +687,17 @@ export default function RetentionHoldStudioView({
 
               {/* Filters */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                <div className="md:col-span-5 relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-3 text-[#9CA3AF] text-[16px]">search</span>
-                  <input
-                    type="text"
+                <div className="md:col-span-5">
+                  <UiverseSearchBar
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={handleSearchKeyDown}
+                    onSubmit={() => loadRecords()}
                     placeholder="Search Docket, Title, Lock Ref..."
-                    className="w-full h-8 pl-9 pr-3 bg-white border border-[#D8DEEA] text-xs text-[#151c27] placeholder:text-[#9CA3AF] rounded-full focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
+                    onClear={() => {
+                      setSearchQuery('');
+                      loadRecords('');
+                    }}
+                    compact
                   />
                 </div>
                 <div className="md:col-span-4">
@@ -995,16 +999,19 @@ export default function RetentionHoldStudioView({
                 <span>Registry Record Quick-Lookup</span>
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={cnrInput}
-                  onChange={(e) => setCnrInput(e.target.value)}
-                  placeholder="Enter Document ID or Lock Ref..."
-                  className="flex-1 h-8 px-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] placeholder:text-[#9CA3AF] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93]"
-                />
+                <div className="flex-1">
+                  <UiverseSearchBar
+                    value={cnrInput}
+                    onChange={(e) => setCnrInput(e.target.value)}
+                    placeholder="Enter Document ID or Lock Ref..."
+                    onClear={() => setCnrInput('')}
+                    onSubmit={handleVerifyCNR}
+                    compact
+                  />
+                </div>
                 <button
                   onClick={handleVerifyCNR}
-                  className="px-3.5 py-1.5 bg-[#000000] text-white rounded-full text-xs font-medium hover:bg-[#181c22] transition"
+                  className="px-3.5 py-2 bg-[#000000] text-white rounded-full text-xs font-medium hover:bg-[#181c22] transition shrink-0 cursor-pointer shadow-xs"
                 >
                   Verify
                 </button>
