@@ -66,20 +66,16 @@ export class BlockchainService {
       });
     }
 
-    // 3. Persist the anchoring record in blockchain_records table
-    const recordId = crypto.randomUUID();
+    // 3. Persist the anchoring record in blockchain_records table (WORM immutable)
+    let recordId: string = crypto.randomUUID();
     try {
-      await query(
+      const insertRes = await query<{ id: string }>(
         `INSERT INTO blockchain_records (
            id, audit_event_id, network_name, channel_name, chaincode_name,
            transaction_id, payload_hash, ledger_status, submitted_at, confirmed_at
          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         ON CONFLICT (audit_event_id) DO UPDATE SET
-           transaction_id = EXCLUDED.transaction_id,
-           payload_hash = EXCLUDED.payload_hash,
-           ledger_status = EXCLUDED.ledger_status,
-           submitted_at = EXCLUDED.submitted_at,
-           confirmed_at = EXCLUDED.confirmed_at;`,
+         ON CONFLICT (audit_event_id) DO NOTHING
+         RETURNING id;`,
         [
           recordId,
           validAuditEventId,
@@ -93,6 +89,18 @@ export class BlockchainService {
           txResult.confirmedAt,
         ]
       );
+      if (insertRes.length > 0) {
+        recordId = insertRes[0].id;
+      } else {
+        // Record was already anchored, fetch existing recordId without violating WORM trigger
+        const existing = await query<{ id: string }>(
+          'SELECT id FROM blockchain_records WHERE audit_event_id = $1 LIMIT 1;',
+          [validAuditEventId]
+        );
+        if (existing.length > 0) {
+          recordId = existing[0].id;
+        }
+      }
     } catch (dbErr: any) {
       console.error('[BLOCKCHAIN_SERVICE] Failed to persist blockchain record:', dbErr.message);
       throw new Error(`Blockchain record persistence failed: ${dbErr.message}`);

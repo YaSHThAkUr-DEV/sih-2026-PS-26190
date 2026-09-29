@@ -661,8 +661,7 @@ async function main() {
     const vaultRef = JSON.stringify({
       iv: envelope.iv,
       authTag: envelope.authTag,
-      encryptedDataKey: envelope.encryptedDataKey,
-      kmsKeyId: envelope.kmsKeyId,
+      wrappedDek: envelope.wrappedDek,
       kmsProvider: envelope.kmsProvider,
       cipherAlgorithm: envelope.cipherAlgorithm,
     });
