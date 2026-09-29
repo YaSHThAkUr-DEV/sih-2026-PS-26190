@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pool, query } from '@/lib/db';
 import { getCurrentSession } from '@/lib/auth/jwt';
-import { canApproveDocuments } from '@/lib/auth/rbac';
+import { canApproveDocuments, isSuperAdmin } from '@/lib/auth/rbac';
 import { logAuditEvent } from '@/lib/auth/audit';
 import { invalidateCache } from '@/lib/cache/redis';
 import { JobQueueManager } from '@/lib/jobs/queue';
@@ -72,7 +72,16 @@ export async function POST(
       );
     }
 
-    // 5. Enforce Statutory Maker-Checker Dual Custody Rule
+    // 5. Enforce Organization Boundary (unless SUPER_ADMIN)
+    const isSuper = isSuperAdmin(session);
+    if (!isSuper && session.organizationId !== cr.organization_id) {
+      return NextResponse.json(
+        { error: 'Access Denied: You can only adjudicate change requests within your sovereign organization.' },
+        { status: 403 }
+      );
+    }
+
+    // 6. Enforce Statutory Maker-Checker Dual Custody Rule
     if (session.userId === cr.requested_by) {
       return NextResponse.json(
         {
@@ -83,36 +92,38 @@ export async function POST(
       );
     }
 
-    // 6. Check Approver Privilege (Assigned approver OR permission-based role)
+    // 7. Check Approver Privilege (Assigned approver OR permission-based role)
     const isAssigned = cr.assigned_approver_id === session.userId;
     const hasPrivilege = canApproveDocuments(session);
 
     if (!isAssigned && !hasPrivilege) {
       return NextResponse.json(
-        { error: 'Access Denied: You do not possess the required clearance level to adjudicate this change request.' },
+        { error: 'Access Denied: You do not possess the required clearance level or role to adjudicate this change request.' },
         { status: 403 }
       );
     }
 
-    // 7. Atomic Transaction Execution
+    // 8. Atomic Transaction Execution
     await client.query('BEGIN');
 
     const ipAddress = req.headers.get('x-forwarded-for') || '127.0.0.1';
 
     if (decision === 'APPROVED') {
-      // 1. Promote proposed version to active current version on document
+      // 1. Promote proposed version to active current version on document and set document status ACTIVE
       await client.query(
         `UPDATE documents 
-         SET current_version_id = $1, updated_at = NOW(), updated_by = $2 
+         SET current_version_id = $1, status = 'ACTIVE', updated_at = NOW(), updated_by = $2 
          WHERE id = $3;`,
         [cr.proposed_version_id, session.userId, cr.document_id]
       );
 
-      // 2. Mark original version as ARCHIVED
-      await client.query(
-        `UPDATE document_versions SET status = 'ARCHIVED' WHERE id = $1;`,
-        [cr.original_version_id]
-      );
+      // 2. Mark original version as ARCHIVED (if it's a separate prior version)
+      if (cr.original_version_id && cr.original_version_id !== cr.proposed_version_id) {
+        await client.query(
+          `UPDATE document_versions SET status = 'ARCHIVED' WHERE id = $1;`,
+          [cr.original_version_id]
+        );
+      }
 
       // 3. Mark proposed version as ACTIVE
       await client.query(
@@ -136,25 +147,6 @@ export async function POST(
          VALUES ($1, $2, 'APPROVED', $3, $4);`,
         [cr.id, session.userId, comment, cr.proposed_hash]
       );
-
-      // 6. Emit Tamper-Evident Audit Event
-      await logAuditEvent({
-        organizationId: cr.organization_id,
-        eventType: 'DOCUMENT_CHANGE_APPROVED',
-        actorId: session.userId,
-        resourceType: 'DOCUMENT',
-        documentId: cr.document_id,
-        documentVersionId: cr.proposed_version_id,
-        ipAddress,
-        result: 'SUCCESS',
-        metadata: {
-          changeRequestId: cr.id,
-          documentNumber: cr.document_number,
-          promotedVersion: cr.proposed_version_number,
-          sha256: cr.proposed_hash,
-          justification: comment,
-        },
-      });
     } else {
       // REJECTED Flow
       // 1. Mark proposed version as REJECTED
@@ -163,7 +155,25 @@ export async function POST(
         [cr.proposed_version_id]
       );
 
-      // 2. Finalize change request as REJECTED
+      // 2. If it is an initial v1 submission (no prior version), mark document as ARCHIVED
+      if (!cr.original_version_id || cr.original_version_id === cr.proposed_version_id) {
+        await client.query(
+          `UPDATE documents SET status = 'ARCHIVED', updated_at = NOW(), updated_by = $2 WHERE id = $1;`,
+          [cr.document_id, session.userId]
+        );
+      } else {
+        // Revision rejection: restore baseline version as active on document
+        await client.query(
+          `UPDATE documents SET current_version_id = $1, status = 'ACTIVE', updated_at = NOW(), updated_by = $2 WHERE id = $3;`,
+          [cr.original_version_id, session.userId, cr.document_id]
+        );
+        await client.query(
+          `UPDATE document_versions SET status = 'ACTIVE' WHERE id = $1;`,
+          [cr.original_version_id]
+        );
+      }
+
+      // 3. Finalize change request as REJECTED
       await client.query(
         `UPDATE change_requests 
          SET status = 'REJECTED', decided_at = NOW() 
@@ -171,7 +181,7 @@ export async function POST(
         [cr.id]
       );
 
-      // 3. Insert audit action into approval_actions
+      // 4. Insert audit action into approval_actions
       await client.query(
         `INSERT INTO approval_actions (
            change_request_id, approver_id, decision, comment, approved_version_hash
@@ -179,11 +189,23 @@ export async function POST(
          VALUES ($1, $2, 'REJECTED', $3, $4);`,
         [cr.id, session.userId, comment, cr.proposed_hash]
       );
+    }
 
-      // 4. Emit Tamper-Evident Audit Event
+    await client.query('COMMIT');
+
+    // Invalidate Redis Caches
+    try {
+      await invalidateCache('dms:dashboard:*');
+      await invalidateCache('dms:documents:*');
+    } catch (cErr: any) {
+      console.warn('[CACHE_INVALIDATE_WARN]', cErr.message);
+    }
+
+    // Tamper-Evident Audit Event (Logged outside transaction to avoid lock contention)
+    try {
       await logAuditEvent({
         organizationId: cr.organization_id,
-        eventType: 'DOCUMENT_CHANGE_REJECTED',
+        eventType: decision === 'APPROVED' ? 'DOCUMENT_CHANGE_APPROVED' : 'DOCUMENT_CHANGE_REJECTED',
         actorId: session.userId,
         resourceType: 'DOCUMENT',
         documentId: cr.document_id,
@@ -193,17 +215,15 @@ export async function POST(
         metadata: {
           changeRequestId: cr.id,
           documentNumber: cr.document_number,
-          rejectedVersion: cr.proposed_version_number,
+          version: cr.proposed_version_number,
           sha256: cr.proposed_hash,
           justification: comment,
+          decision,
         },
       });
+    } catch (auditErr: any) {
+      console.error('[AUDIT_LOG_ERROR]', auditErr);
     }
-
-    await client.query('COMMIT');
-
-    // Invalidate Redis Dashboard Cache
-    await invalidateCache('dms:dashboard:*');
 
     // Enqueue Blockchain Hash Anchoring (Module 21 — Hyperledger Fabric Integrity)
     try {
@@ -235,7 +255,6 @@ export async function POST(
         );
       }
     } catch (bcErr: any) {
-      // Non-blocking — blockchain anchoring failure should not block approval
       console.warn('[BLOCKCHAIN_ENQUEUE_WARN] Approval anchor deferred:', bcErr.message);
     }
 

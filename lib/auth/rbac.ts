@@ -60,7 +60,7 @@ export function canVerifyBlockchain(session: UserSessionPayload): boolean {
 }
 
 export function canApproveDocuments(session: UserSessionPayload): boolean {
-  return isSuperAdmin(session) || hasAnyPermission(session, ['DOCUMENT_APPROVE', 'DOCUMENT_MANAGE', 'PERMISSION_MANAGE']);
+  return isSuperAdmin(session) || hasAnyPermission(session, ['DOCUMENT_APPROVE', 'DOCUMENT_APPROVE_CHANGE', 'DOCUMENT_REJECT_CHANGE', 'DOCUMENT_MANAGE', 'PERMISSION_MANAGE']);
 }
 
 export function canManageRetention(session: UserSessionPayload): boolean {
@@ -106,6 +106,7 @@ export function canRespondInterOrg(session: UserSessionPayload): boolean {
   return isSuperAdmin(session) || hasAnyPermission(session, [
     'INTER_ORG_RESPOND',
     'DOCUMENT_APPROVE',
+    'DOCUMENT_APPROVE_CHANGE',
     'DOCUMENT_MANAGE',
     'PERMISSION_MANAGE'
   ]);

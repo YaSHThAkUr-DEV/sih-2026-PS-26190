@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { getCurrentSession } from '@/lib/auth/jwt';
-import { canApproveDocuments } from '@/lib/auth/rbac';
+import { canApproveDocuments, isSuperAdmin } from '@/lib/auth/rbac';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
     } else if (statusParam === 'ALL') {
       statusFilter = '1=1';
     }
+
+    const isSuper = isSuperAdmin(session);
 
     const sql = `
       SELECT 
@@ -59,7 +61,8 @@ export async function GET(req: NextRequest) {
         prop_v.sha256_hash as proposed_sha256,
         act.decision as last_decision,
         act.comment as decision_comment,
-        act.created_at as decision_timestamp
+        act.created_at as decision_timestamp,
+        act_u.full_name as approver_actor_name
       FROM change_requests cr
       JOIN documents d ON cr.document_id = d.id
       LEFT JOIN departments dept ON d.department_id = dept.id
@@ -69,20 +72,29 @@ export async function GET(req: NextRequest) {
       LEFT JOIN users app_u ON cr.assigned_approver_id = app_u.id
       LEFT JOIN document_versions orig_v ON cr.original_version_id = orig_v.id
       JOIN document_versions prop_v ON cr.proposed_version_id = prop_v.id
-      LEFT JOIN approval_actions act ON act.change_request_id = cr.id
-      WHERE d.organization_id = $1 AND ${statusFilter}
+      LEFT JOIN LATERAL (
+        SELECT aa.decision, aa.comment, aa.created_at, aa.approver_id
+        FROM approval_actions aa
+        WHERE aa.change_request_id = cr.id
+        ORDER BY aa.created_at DESC
+        LIMIT 1
+      ) act ON true
+      LEFT JOIN users act_u ON act.approver_id = act_u.id
+      WHERE (d.organization_id = $1 OR $2 = true) AND ${statusFilter}
       ORDER BY cr.created_at DESC;
     `;
 
-    const rows = await query<any>(sql, [session.organizationId]);
+    const rows = await query<any>(sql, [session.organizationId, isSuper]);
 
     // Format output with canApprove flag for the logged-in officer
     const requests = rows.map((r) => {
       const isRequester = r.requester_id === session.userId;
-      // An officer can approve if they are NOT the requester, AND they are either the assigned approver, or have document approval permissions
       const isAssigned = r.assigned_approver_id === session.userId;
       const hasPrivilege = canApproveDocuments(session);
-      const canApprove = !isRequester && (isAssigned || hasPrivilege) && r.request_status === 'PENDING';
+      const isSameOrg = session.organizationId === r.organization_id || isSuper;
+      const canApprove = isSameOrg && !isRequester && (isAssigned || hasPrivilege) && r.request_status === 'PENDING';
+
+      const isInitialSubmission = !r.original_version_id || r.original_version_id === r.proposed_version_id;
 
       return {
         id: r.request_id,
@@ -94,42 +106,44 @@ export async function GET(req: NextRequest) {
           id: r.document_id,
           documentNumber: r.document_number,
           title: r.document_title,
-          department: r.department_name,
-          departmentCode: r.department_code,
-          securityTier: r.security_tier,
-          securityTierName: r.security_tier_name,
-          type: r.document_type_name,
+          department: r.department_name || 'General Administration',
+          departmentCode: r.department_code || 'GEN',
+          securityTier: r.security_tier || 'T3',
+          securityTierName: r.security_tier_name || 'Confidential',
+          type: r.document_type_name || 'General Docket',
         },
         requester: {
           id: r.requester_id,
           name: r.requester_name,
-          designation: r.requester_designation,
+          designation: r.requester_designation || 'Dealing Officer',
           isCurrentOfficer: isRequester,
         },
         assignedApprover: {
           id: r.assigned_approver_id,
-          name: r.assigned_approver_name,
-          designation: r.assigned_approver_designation,
+          name: r.assigned_approver_name || 'Designated Approver',
+          designation: r.assigned_approver_designation || 'Section Authority',
         },
         originalVersion: {
-          id: r.original_version_id,
-          versionNumber: r.original_version_number,
-          fileName: r.original_file_name,
-          fileSize: Number(r.original_file_size),
-          sha256: r.original_sha256,
+          id: r.original_version_id || null,
+          versionNumber: r.original_version_number != null ? Number(r.original_version_number) : 1,
+          fileName: r.original_file_name || (isInitialSubmission ? 'Initial Ingest Docket' : 'Baseline Document'),
+          fileSize: Number(r.original_file_size || r.proposed_file_size || 0),
+          sha256: r.original_sha256 || 'N/A (First Sealed Ingestion)',
+          isInitialSubmission,
         },
         proposedVersion: {
           id: r.proposed_version_id,
-          versionNumber: r.proposed_version_number,
-          fileName: r.proposed_file_name,
-          fileSize: Number(r.proposed_file_size),
-          sha256: r.proposed_sha256,
+          versionNumber: Number(r.proposed_version_number || 1),
+          fileName: r.proposed_file_name || 'Document File',
+          fileSize: Number(r.proposed_file_size || 0),
+          sha256: r.proposed_sha256 || '',
         },
         lastDecision: r.last_decision
           ? {
               decision: r.last_decision,
               comment: r.decision_comment,
               timestamp: r.decision_timestamp,
+              approverName: r.approver_actor_name || 'Designated Approver',
             }
           : null,
         canApprove,
