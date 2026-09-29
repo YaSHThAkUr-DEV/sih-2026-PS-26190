@@ -1101,20 +1101,18 @@ export default function DashboardPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-[#f0f3ff]/60 text-[#45474b] text-[11px] font-semibold uppercase tracking-wider border-b border-[#D8DEEA]/60">
-                        <th className="py-3 px-4">Document Number</th>
-                        <th className="py-3 px-4">Title &amp; Summary</th>
-                        <th className="py-3 px-4">Type</th>
-                        <th className="py-3 px-4">Clearance</th>
-                        <th className="py-3 px-4">Version &amp; Size</th>
-                        <th className="py-3 px-4">Officer &amp; Dept</th>
-                        <th className="py-3 px-4">SHA-256 Digest</th>
+                        <th className="py-3 px-4 min-w-[280px]">Docket &amp; Title</th>
+                        <th className="py-3 px-3">Classification</th>
+                        <th className="py-3 px-3">Clearance</th>
+                        <th className="py-3 px-3 hidden md:table-cell">Officer &amp; Dept</th>
+                        <th className="py-3 px-3 hidden xl:table-cell">SHA-256 Digest</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#D8DEEA]/30 text-xs text-[#151c27]">
                       {docsLoading ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-400">
+                          <td colSpan={6} className="py-12 text-center text-slate-400">
                             <div className="flex items-center justify-center gap-2">
                               <span className="material-symbols-outlined animate-spin text-[#3f5e93]">sync</span>
                               <span>Loading vault records...</span>
@@ -1123,63 +1121,95 @@ export default function DashboardPage() {
                         </tr>
                       ) : documents.length === 0 ? (
                         <tr>
-                          <td colSpan={8} className="py-12 text-center text-slate-400">
+                          <td colSpan={6} className="py-12 text-center text-slate-400">
                             <span className="material-symbols-outlined text-[36px] text-slate-300 block mb-1">search_off</span>
                             <p className="text-sm font-semibold text-slate-600">No documents match the active filter</p>
                           </td>
                         </tr>
                       ) : (
                         documents.map((doc, index) => (
-                          <tr key={`${doc.id}-${doc.version_number || index}`} className="hover:bg-[#f0f3ff]/40 transition font-medium">
-                            <td className="py-3.5 px-4 font-mono font-semibold text-[#151c27] whitespace-nowrap">
-                              <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-[16px] text-[#3f5e93]">description</span>
-                                <span>{doc.document_number}</span>
+                          <tr
+                            key={`${doc.id}-${doc.version_number || index}`}
+                            className="hover:bg-[#f0f3ff]/40 transition font-medium group"
+                          >
+                            {/* Column 1: Combined Docket + Title + Version/Size */}
+                            <td className="py-3.5 px-4 min-w-[280px] max-w-md">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-mono text-[11px] font-bold text-[#3f5e93] bg-[#f0f3ff] border border-[#D8DEEA] px-2 py-0.2 rounded-md">
+                                    {doc.document_number}
+                                  </span>
+                                  <span className="text-[10px] font-mono text-[#9CA3AF] bg-white border border-[#D8DEEA] px-1.5 py-0.2 rounded">
+                                    v{doc.version_number}.0 • {(doc.file_size / 1024).toFixed(1)} KB
+                                  </span>
+                                </div>
+                                <div
+                                  onClick={() => setSelectedDoc(doc)}
+                                  className="font-semibold text-[#151c27] group-hover:text-[#3f5e93] transition-colors cursor-pointer line-clamp-1"
+                                  title={doc.title}
+                                >
+                                  {doc.title}
+                                </div>
+                                {doc.description && (
+                                  <div className="text-[11px] text-[#9CA3AF] truncate max-w-sm">
+                                    {doc.description}
+                                  </div>
+                                )}
                               </div>
                             </td>
-                            <td className="py-3.5 px-4 max-w-sm">
-                              <div className="font-semibold text-[#151c27] truncate">{doc.title}</div>
-                              <div className="text-[11px] text-[#9CA3AF] truncate">{doc.description || 'No notes'}</div>
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
+
+                            {/* Column 2: Classification Type */}
+                            <td className="py-3.5 px-3 whitespace-nowrap">
                               <span className="text-[11px] font-mono font-semibold px-2 py-0.5 bg-[#f0f3ff] text-[#151c27] rounded-full border border-[#D8DEEA]">
                                 {doc.document_type_code}
                               </span>
                             </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
-                                doc.security_rank >= 4
-                                  ? 'bg-[rgba(206,105,105,0.14)] text-[#ca6666]'
-                                  : doc.security_rank === 3
-                                  ? 'bg-[rgba(131,162,219,0.14)] text-[#3f5e93]'
-                                  : 'bg-[#E4E4E4] text-[#45474b]'
-                              }`}>
+
+                            {/* Column 3: Security Clearance */}
+                            <td className="py-3.5 px-3 whitespace-nowrap">
+                              <span
+                                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
+                                  doc.security_rank >= 4
+                                    ? 'bg-[rgba(206,105,105,0.14)] text-[#ca6666]'
+                                    : doc.security_rank === 3
+                                    ? 'bg-[rgba(131,162,219,0.14)] text-[#3f5e93]'
+                                    : 'bg-[#E4E4E4] text-[#45474b]'
+                                }`}
+                              >
                                 {doc.security_tier_name || doc.security_tier}
                               </span>
                             </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap font-mono text-[11px]">
-                              <span className="text-[#151c27] font-semibold">v{doc.version_number}.0</span>
-                              <span className="text-[#9CA3AF] block text-[10px]">
-                                {(doc.file_size / 1024).toFixed(1)} KB
-                              </span>
+
+                            {/* Column 4: Officer & Dept (Hidden on mobile/tablet) */}
+                            <td className="py-3.5 px-3 whitespace-nowrap hidden md:table-cell">
+                              <div className="flex flex-col">
+                                <span className="text-[#151c27] font-semibold truncate max-w-[170px]">
+                                  {doc.owner_name}
+                                </span>
+                                <span className="text-[10px] text-[#9CA3AF] truncate max-w-[170px]">
+                                  {doc.department_name}
+                                </span>
+                              </div>
                             </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap">
-                              <div className="text-[#151c27]">{doc.owner_name}</div>
-                              <div className="text-[10px] text-[#9CA3AF]">{doc.department_name}</div>
-                            </td>
-                            <td className="py-3.5 px-4 whitespace-nowrap font-mono text-[10px]">
+
+                            {/* Column 5: SHA-256 Digest (Hidden on smaller screens) */}
+                            <td className="py-3.5 px-3 whitespace-nowrap font-mono text-[10px] hidden xl:table-cell">
                               <button
                                 onClick={() => {
                                   navigator.clipboard.writeText(doc.sha256_hash);
                                   showToast(`Copied SHA-256 for ${doc.document_number}`);
                                 }}
-                                className="text-[#9CA3AF] hover:text-[#3f5e93] flex items-center gap-1 group cursor-pointer"
-                                title="Click to copy hash"
+                                className="text-[#9CA3AF] hover:text-[#3f5e93] flex items-center gap-1 group/btn cursor-pointer bg-[#f0f3ff]/50 px-2 py-1 rounded-md border border-[#D8DEEA]/60"
+                                title="Click to copy full hash"
                               >
-                                <span>sha256:{doc.sha256_hash.substring(0, 8)}...</span>
-                                <span className="material-symbols-outlined text-[12px] opacity-0 group-hover:opacity-100">content_copy</span>
+                                <span>sha256:{doc.sha256_hash ? doc.sha256_hash.substring(0, 8) : ''}...</span>
+                                <span className="material-symbols-outlined text-[12px] opacity-60 group-hover/btn:opacity-100">
+                                  content_copy
+                                </span>
                               </button>
                             </td>
+
+                            {/* Column 6: Actions */}
                             <td className="py-3.5 px-4 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1">
                                 <button
