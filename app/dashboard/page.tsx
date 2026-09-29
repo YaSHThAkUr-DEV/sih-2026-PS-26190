@@ -1097,7 +1097,12 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Table */}
-                <div className="overflow-x-auto w-full">
+                <div className="overflow-x-auto w-full min-h-[540px] relative flex flex-col justify-between">
+                  {docsLoading && (
+                    <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-100 overflow-hidden z-20">
+                      <div className="h-full bg-[#3f5e93] animate-pulse w-full"></div>
+                    </div>
+                  )}
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-[#f0f3ff]/60 text-[#45474b] text-[11px] font-semibold uppercase tracking-wider border-b border-[#D8DEEA]/60">
@@ -1109,20 +1114,20 @@ export default function DashboardPage() {
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#D8DEEA]/30 text-xs text-[#151c27]">
-                      {docsLoading ? (
+                    <tbody className={`divide-y divide-[#D8DEEA]/30 text-xs text-[#151c27] transition-opacity duration-150 ${docsLoading && documents.length > 0 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+                      {docsLoading && documents.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-12 text-center text-slate-400">
-                            <div className="flex items-center justify-center gap-2">
-                              <span className="material-symbols-outlined animate-spin text-[#3f5e93]">sync</span>
-                              <span>Loading vault records...</span>
+                          <td colSpan={6} className="py-24 text-center text-slate-400">
+                            <div className="flex flex-col items-center justify-center gap-2">
+                              <span className="material-symbols-outlined text-[28px] animate-spin text-[#3f5e93]">sync</span>
+                              <span className="text-xs font-medium">Loading vault records...</span>
                             </div>
                           </td>
                         </tr>
                       ) : documents.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-12 text-center text-slate-400">
-                            <span className="material-symbols-outlined text-[36px] text-slate-300 block mb-1">search_off</span>
+                          <td colSpan={6} className="py-24 text-center text-slate-400">
+                            <span className="material-symbols-outlined text-[36px] text-slate-300 block mb-1 mx-auto">search_off</span>
                             <p className="text-sm font-semibold text-slate-600">No documents match the active filter</p>
                           </td>
                         </tr>
@@ -1195,6 +1200,7 @@ export default function DashboardPage() {
                             {/* Column 5: SHA-256 Digest (Hidden on smaller screens) */}
                             <td className="py-3.5 px-3 whitespace-nowrap font-mono text-[10px] hidden xl:table-cell">
                               <button
+                                type="button"
                                 onClick={() => {
                                   navigator.clipboard.writeText(doc.sha256_hash);
                                   showToast(`Copied SHA-256 for ${doc.document_number}`);
@@ -1213,6 +1219,7 @@ export default function DashboardPage() {
                             <td className="py-3.5 px-4 text-right whitespace-nowrap">
                               <div className="flex items-center justify-end gap-1">
                                 <button
+                                  type="button"
                                   onClick={() => handleDownloadDocument(doc.id, doc.document_number, doc.file_name)}
                                   className="w-8 h-8 rounded-full hover:bg-[#e2e8f8] text-[#45474b] flex items-center justify-center transition cursor-pointer"
                                   title="Download Decrypted File"
@@ -1220,6 +1227,7 @@ export default function DashboardPage() {
                                   <span className="material-symbols-outlined text-[17px]">download</span>
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => setVersionHistoryDoc(doc)}
                                   className="w-8 h-8 rounded-full hover:bg-[#e2e8f8] text-[#45474b] flex items-center justify-center transition cursor-pointer"
                                   title="Version Timeline"
@@ -1227,6 +1235,7 @@ export default function DashboardPage() {
                                   <span className="material-symbols-outlined text-[17px]">history</span>
                                 </button>
                                 <button
+                                  type="button"
                                   onClick={() => setSelectedDoc(doc)}
                                   className="w-8 h-8 rounded-full hover:bg-[#e2e8f8] text-[#45474b] flex items-center justify-center transition cursor-pointer"
                                   title="View Details"
@@ -1254,6 +1263,7 @@ export default function DashboardPage() {
 
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
                       onClick={() => handlePageChange(pagination.page - 1)}
                       disabled={pagination.page <= 1 || docsLoading}
                       className="px-3 py-1.5 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer"
@@ -1264,6 +1274,7 @@ export default function DashboardPage() {
                       {pagination.page}
                     </span>
                     <button
+                      type="button"
                       onClick={() => handlePageChange(pagination.page + 1)}
                       disabled={pagination.page >= pagination.totalPages || docsLoading}
                       className="px-3 py-1.5 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer"

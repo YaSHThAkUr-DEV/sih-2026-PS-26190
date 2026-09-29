@@ -760,7 +760,12 @@ export default function RetentionHoldStudioView({
               </div>
             </div>
 
-            <div className="w-full overflow-x-auto">
+            <div className="w-full overflow-x-auto min-h-[540px] relative flex flex-col justify-between">
+              {loading && (
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-blue-100 overflow-hidden z-20">
+                  <div className="h-full bg-[#3f5e93] animate-pulse w-full"></div>
+                </div>
+              )}
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#f0f3ff]/60 text-[#6B7280] text-[10px] font-semibold uppercase tracking-wider border-b border-[#D8DEEA]/60">
                   <tr>
@@ -772,17 +777,17 @@ export default function RetentionHoldStudioView({
                     <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
-                  {loading ? (
+                <tbody className={`divide-y divide-[#D8DEEA]/40 text-[#10141A] transition-opacity duration-150 ${loading && records.length > 0 ? 'opacity-40 pointer-events-none' : 'opacity-100'}`}>
+                  {loading && records.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-[#6B7280]">
-                        <span className="material-symbols-outlined text-[24px] animate-spin text-[#3f5e93] block mb-1">sync</span>
-                        Loading retention records...
+                      <td colSpan={6} className="py-24 text-center text-[#6B7280]">
+                        <span className="material-symbols-outlined text-[28px] animate-spin text-[#3f5e93] block mb-2 mx-auto">sync</span>
+                        <span className="text-xs font-medium">Loading retention records...</span>
                       </td>
                     </tr>
                   ) : records.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-[#6B7280]">
+                      <td colSpan={6} className="py-24 text-center text-[#6B7280]">
                         No records match current filter criteria.
                       </td>
                     </tr>
@@ -849,6 +854,7 @@ export default function RetentionHoldStudioView({
                           <td className="py-3 px-4 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                               <button
+                                type="button"
                                 onClick={() => handleOpenReassignModal(rec)}
                                 className="w-7 h-7 rounded-full bg-white hover:bg-[#f0f3ff] text-[#3f5e93] border border-[#D8DEEA] inline-flex items-center justify-center transition"
                                 title="Attach / Change Statutory Retention Schedule"
@@ -858,6 +864,7 @@ export default function RetentionHoldStudioView({
 
                               {rec.isLegalHold ? (
                                 <button
+                                  type="button"
                                   onClick={() => handleLiftLegalHold(rec)}
                                   className="w-7 h-7 rounded-full bg-white hover:bg-[#f0f3ff] text-[#3f5e93] border border-[#D8DEEA] inline-flex items-center justify-center transition"
                                   title="Release Preservation Lock"
@@ -866,6 +873,7 @@ export default function RetentionHoldStudioView({
                                 </button>
                               ) : rec.deletionRequest?.status === 'PENDING_APPROVAL' ? (
                                 <button
+                                  type="button"
                                   onClick={() => setSelectedRecord(rec)}
                                   className="px-2.5 py-1 rounded-full bg-rose-600 text-white text-[11px] font-medium hover:bg-rose-700 transition"
                                 >
@@ -874,6 +882,7 @@ export default function RetentionHoldStudioView({
                               ) : (
                                 <>
                                   <button
+                                    type="button"
                                     onClick={() => handleOpenLegalHoldModal(rec)}
                                     className="w-7 h-7 rounded-full bg-white hover:bg-[#f0f3ff] text-[#10141A] border border-[#D8DEEA] inline-flex items-center justify-center transition"
                                     title="Apply Lock"
@@ -881,6 +890,7 @@ export default function RetentionHoldStudioView({
                                     <span className="material-symbols-outlined text-[15px]">lock</span>
                                   </button>
                                   <button
+                                    type="button"
                                     onClick={() => handleOpenProposeModal(rec)}
                                     className="w-7 h-7 rounded-full bg-white hover:bg-rose-50 text-rose-600 border border-[#D8DEEA] inline-flex items-center justify-center transition"
                                     title="Stage Disposal"
@@ -930,6 +940,7 @@ export default function RetentionHoldStudioView({
 
                 <div className="flex items-center gap-1.5">
                   <button
+                    type="button"
                     onClick={() => {
                       if (page > 1) loadRecords(page - 1);
                     }}
@@ -942,6 +953,7 @@ export default function RetentionHoldStudioView({
                     {pagination.page} / {pagination.totalPages || 1}
                   </span>
                   <button
+                    type="button"
                     onClick={() => {
                       if (page < pagination.totalPages) loadRecords(page + 1);
                     }}
