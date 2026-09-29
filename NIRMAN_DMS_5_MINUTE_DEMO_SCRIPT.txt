@@ -1,0 +1,172 @@
+================================================================================
+          NIRMAN DMS: 5-MINUTE VIDEO DEMO RECORDING SCRIPT & GUIDE
+================================================================================
+Platform: NIRMAN DMS (Sovereign Document Management & Evidentiary Vault)
+Presenter: Apex System Administrator (admin / Level 5 Clearance)
+Duration: ~5 Minutes (300 Seconds)
+================================================================================
+
+--------------------------------------------------------------------------------
+[0:00 - 0:35] SCENE 1: THE HOOK & EXECUTIVE OVERVIEW
+--------------------------------------------------------------------------------
+SCREEN:  Overview Dashboard (Logged in as admin)
+ACTIONS: Move cursor smoothly across the live metric cards (77 Records,
+         13 WORM Holds, 8 Pending Approvals) and point out the System Health Bar
+         at the bottom (PostgreSQL, Redis, MinIO, Vault KMS, Hyperledger Fabric).
+
+SPOKEN SCRIPT:
+"Hi everyone! Today, government departments, courts, and police still struggle
+with physical paperwork, lost files, or sharing sensitive evidence over regular
+email.
+
+To solve this, we built NIRMAN DMS — a secure, sovereign digital evidence vault
+designed for the Indian government.
+
+Right here on our main dashboard, you can see our live command center. It gives
+officers a bird's-eye view of all encrypted records, pending approvals, active
+legal holds, and connected security services like our encryption vault and
+blockchain network."
+
+
+--------------------------------------------------------------------------------
+[0:35 - 1:15] SCENE 2: THE DOCUMENT VAULT & ENVELOPE ENCRYPTION
+--------------------------------------------------------------------------------
+SCREEN:  Click 'Documents' on the sidebar.
+ACTIONS: Filter by 'T5 Top Secret', click on any document to expand its details
+         drawer, then click the 'Verify Hash' button to show the green check.
+
+SPOKEN SCRIPT:
+"Let’s jump into our Document Registry.
+
+Every file uploaded here is automatically protected with military-grade
+encryption (AES-256). Even if someone hacked the underlying server, they would
+only see unreadable scrambled data.
+
+We also have 5 strict clearance levels — from Public (T1) all the way up to
+Top Secret (T5). An officer only sees what their rank permits.
+
+And if you click 'Verify Hash', our system checks the file's digital fingerprint
+in real-time to mathematically prove that nobody has altered a single letter
+since it was saved."
+
+
+--------------------------------------------------------------------------------
+[1:15 - 1:50] SCENE 3: SMART SEARCH & DEEP OCR
+--------------------------------------------------------------------------------
+SCREEN:  Click 'Search & OCR' on the sidebar.
+ACTIONS: Type 'Section 65B' or 'Directive' into the OCR search box.
+         Click a search result card to show the extracted text snippet and tags.
+
+SPOKEN SCRIPT:
+"Government files often contain hundreds of scanned pages, FIRs, or legal
+notices. Finding the right document used to take hours.
+
+With our Deep OCR Engine, our system reads and indexes every scanned PDF and
+image automatically.
+
+I can simply search for a court case number, a name, or a legal provision like
+'Section 65B', and within a fraction of a second, it highlights the exact
+paragraph across thousands of documents."
+
+
+--------------------------------------------------------------------------------
+[1:50 - 2:30] SCENE 4: MAKER-CHECKER (DUAL-CUSTODY APPROVALS)
+--------------------------------------------------------------------------------
+SCREEN:  Click 'Sensitive Approvals' on the sidebar.
+ACTIONS: Click on a pending review item in the queue, show the requester info,
+         click 'Sanction & Promote' / 'Approve', enter a quick comment, and watch
+         the live digital signing complete.
+
+SPOKEN SCRIPT:
+"In high-security environments, a single officer should never be able to
+silently change an official docket. We enforce a strict 'Maker-Checker' rule.
+
+When an officer submits a revision or a new sensitive file, it sits in this
+queue.
+
+A designated senior approver reviews the changes, checks the justification, and
+digitally signs off. Only then does the new version go live, while the original
+version remains permanently preserved in history."
+
+
+--------------------------------------------------------------------------------
+[2:30 - 3:15] SCENE 5: WORM RETENTION & THE DISPOSAL COCKPIT
+--------------------------------------------------------------------------------
+SCREEN:  Click 'Retention Holds' on the sidebar.
+ACTIONS: Show the 5 statutory schedules at the top. Filter by 'Active Locks Only'
+         to show the frozen WORM records. Then click a record staged for
+         disposal and point to the Disposal Cockpit on the right.
+
+SPOKEN SCRIPT:
+"Now let’s look at Retention and Legal Holds.
+
+By law, certain records must be kept for 7 years, 30 years, or permanently. We
+follow the WORM rule — Write Once, Read Many — meaning nobody can delete locked
+records.
+
+If a court places an evidentiary hold on a case, we flip a switch to freeze the
+docket completely.
+
+And when a standard document finally reaches the end of its life, our Disposal
+Cockpit requires two separate authorized officers (Key 1 and Key 2) to sign off
+before the file is safely shredded from the server."
+
+
+--------------------------------------------------------------------------------
+[3:15 - 3:55] SCENE 6: BLOCKCHAIN PROOF & AUDIT 360
+--------------------------------------------------------------------------------
+SCREEN:  Click 'Blockchain Ledger', then click 'Audit Trail'.
+ACTIONS: Show confirmed Fabric blocks on the blockchain. In Audit Trail, click
+         an event row to open the Officer Dossier popup with IP telemetry.
+
+SPOKEN SCRIPT:
+"To ensure evidence can stand up in a court of law, we anchor every critical
+action to a Hyperledger Fabric Blockchain.
+
+Over in Auditor 360, compliance teams have a tamper-proof event timeline. Every
+login, file download, or decryption request is tracked with exact timestamps, IP
+addresses, and officer credentials.
+
+If anyone ever tries to access something they shouldn't, it is instantly
+flagged for internal vigilance."
+
+
+--------------------------------------------------------------------------------
+[3:55 - 4:40] SCENE 7: THE INTER-AGENCY SOVEREIGN HIGHWAY
+--------------------------------------------------------------------------------
+SCREEN:  Click 'Inter-Agency Highway' on the sidebar.
+ACTIONS: Point out the 6 connected agencies (High Court, CBI, Police, FSL Labs,
+         Revenue, Digital Authority). Click 'Active Requisitions' and show an
+         active shared document with dynamic watermarking.
+
+SPOKEN SCRIPT:
+"One of our proudest innovations is the Inter-Agency Sovereign Highway.
+
+Currently, if the Police or High Court need a forensic report from the Cyber
+Labs or CBI, files are often emailed or moved on USB pen drives — which is a
+major security risk.
+
+With our highway, agencies request files directly through secure channels with
+strict time limits. Once approved, the recipient gets a view-only link with an
+invisible watermark that automatically expires in a few days. The chain of
+custody is 100% maintained."
+
+
+--------------------------------------------------------------------------------
+[4:40 - 5:00] SCENE 8: WRAP-UP & CONCLUSION
+--------------------------------------------------------------------------------
+SCREEN:  Click 'Overview' or 'Administration' to finish.
+ACTIONS: End on the clean dashboard.
+
+SPOKEN SCRIPT:
+"To wrap up: NIRMAN DMS brings together modern encryption, automated OCR,
+dual-custody governance, blockchain verification, and inter-agency collaboration
+into one seamless, intuitive platform.
+
+It makes government operations faster, safer, and 100% transparent.
+
+Thank you so much for your time!"
+
+================================================================================
+                             END OF RECORDING SCRIPT
+================================================================================
