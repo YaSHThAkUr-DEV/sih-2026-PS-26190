@@ -184,10 +184,24 @@ export default function AdministrationView({
   const [recentAuditsPage, setRecentAuditsPage] = useState(1);
   const AUDITS_PAGE_SIZE = 10;
 
-  // Users Filter States
+  // Users Filter & Pagination States
   const [userSearch, setUserSearch] = useState('');
   const [userDeptFilter, setUserDeptFilter] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('ALL');
+  const [userPage, setUserPage] = useState(1);
+  const [userPageSize, setUserPageSize] = useState(10);
+
+  // Policy & Schedule Filter & Pagination States
+  const [policySubTab, setPolicySubTab] = useState<'routing' | 'schedules'>('routing');
+  const [policyDeptFilter, setPolicyDeptFilter] = useState<string>('ALL');
+  const [policySearch, setPolicySearch] = useState<string>('');
+  const [scheduleSearch, setScheduleSearch] = useState<string>('');
+  const [policyPage, setPolicyPage] = useState(1);
+  const POLICY_PAGE_SIZE = 10;
+  const [schedulePage, setSchedulePage] = useState(1);
+  const SCHEDULE_PAGE_SIZE = 10;
+  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
 
   // RBAC Selected Role & Filters
   const [selectedRole, setSelectedRole] = useState<RoleItem | null>(null);
@@ -195,14 +209,6 @@ export default function AdministrationView({
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [permissionSearch, setPermissionSearch] = useState('');
   const [permissionCategoryFilter, setPermissionCategoryFilter] = useState('ALL');
-
-  // Policy Selected Department & Search
-  const [policySubTab, setPolicySubTab] = useState<'routing' | 'schedules'>('routing');
-  const [policyDeptFilter, setPolicyDeptFilter] = useState<string>('ALL');
-  const [policySearch, setPolicySearch] = useState<string>('');
-  const [scheduleSearch, setScheduleSearch] = useState<string>('');
-  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
-  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
 
   // Modals state
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
@@ -277,9 +283,24 @@ export default function AdministrationView({
     }
   }, [actionFeedback]);
 
-  // Initial Fetcher
-  const loadAllData = useCallback(async () => {
-    setLoading(true);
+  // Reset pagination on filter changes
+  useEffect(() => {
+    setUserPage(1);
+  }, [userSearch, userDeptFilter, userStatusFilter]);
+
+  useEffect(() => {
+    setPolicyPage(1);
+  }, [policySearch, policyDeptFilter]);
+
+  useEffect(() => {
+    setSchedulePage(1);
+  }, [scheduleSearch]);
+
+  // Initial & Background Fetcher (stable without dependency thrashing)
+  const loadAllData = useCallback(async (isInitial = false) => {
+    if (isInitial) {
+      setLoading(true);
+    }
     try {
       const [
         usersRes,
@@ -305,26 +326,31 @@ export default function AdministrationView({
         fetch('/api/admin/system-config').then((r) => r.json()),
       ]);
 
-      if (usersRes.users) setUsers(usersRes.users);
-      if (deptsRes.departments) {
-        setDepartments(deptsRes.departments);
-      }
-      if (teamsRes.teams) setTeams(teamsRes.teams);
-      if (rolesRes.roles) {
+      if (usersRes?.users) setUsers(usersRes.users);
+      if (deptsRes?.departments) setDepartments(deptsRes.departments);
+      if (teamsRes?.teams) setTeams(teamsRes.teams);
+      if (rolesRes?.roles) {
         setRoles(rolesRes.roles);
-        if (!selectedRole && rolesRes.roles.length > 0) {
-          setSelectedRole(rolesRes.roles[0]);
-          setRolePermissionsState(rolesRes.roles[0].permissions.map((p: any) => p.id));
-        }
+        setSelectedRole((prev) => {
+          if (prev) {
+            const found = rolesRes.roles.find((r: any) => r.id === prev.id);
+            return found || prev;
+          }
+          if (rolesRes.roles.length > 0) {
+            setRolePermissionsState(rolesRes.roles[0].permissions?.map((p: any) => p.id) || []);
+            return rolesRes.roles[0];
+          }
+          return null;
+        });
       }
-      if (permsRes.permissions) setPermissions(permsRes.permissions);
-      if (typesRes.documentTypes) setDocumentTypes(typesRes.documentTypes);
-      if (tiersRes.securityLevels) setSecurityLevels(tiersRes.securityLevels);
-      if (policiesRes.policies) setPolicies(policiesRes.policies);
-      if (retSchedulesRes.policies) setRetentionSchedules(retSchedulesRes.policies);
-      if (sysRes.configs) setSystemConfig(sysRes.configs);
-      if (sysRes.metrics) setSystemMetrics(sysRes.metrics);
-      if (sysRes.recentAdminAudits) setRecentAudits(sysRes.recentAdminAudits);
+      if (permsRes?.permissions) setPermissions(permsRes.permissions);
+      if (typesRes?.documentTypes) setDocumentTypes(typesRes.documentTypes);
+      if (tiersRes?.securityLevels) setSecurityLevels(tiersRes.securityLevels);
+      if (policiesRes?.policies) setPolicies(policiesRes.policies);
+      if (retSchedulesRes?.policies) setRetentionSchedules(retSchedulesRes.policies);
+      if (sysRes?.configs) setSystemConfig(sysRes.configs);
+      if (sysRes?.metrics) setSystemMetrics(sysRes.metrics);
+      if (sysRes?.recentAdminAudits) setRecentAudits(sysRes.recentAdminAudits);
     } catch (err: any) {
       console.error('Failed to load admin registry:', err);
       setActionFeedback({
@@ -334,7 +360,7 @@ export default function AdministrationView({
     } finally {
       setLoading(false);
     }
-  }, [selectedRole]);
+  }, []);
 
   const loadOfficeFeatures = useCallback(async () => {
     try {
@@ -349,9 +375,9 @@ export default function AdministrationView({
     }
   }, []);
 
-  // Run on mount
+  // Run on mount only once
   useEffect(() => {
-    loadAllData();
+    loadAllData(true);
     loadOfficeFeatures();
   }, [loadAllData, loadOfficeFeatures]);
 
@@ -763,11 +789,6 @@ export default function AdministrationView({
     }
   };
 
-  useEffect(() => {
-    loadAllData();
-    loadOfficeFeatures();
-  }, [loadOfficeFeatures]);
-
   // Filtered Users list
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
@@ -784,6 +805,57 @@ export default function AdministrationView({
       return true;
     });
   }, [users, userSearch, userDeptFilter, userStatusFilter]);
+
+  const totalUserPages = Math.max(1, Math.ceil(filteredUsers.length / userPageSize));
+  const paginatedUsers = useMemo(() => {
+    const start = (userPage - 1) * userPageSize;
+    return filteredUsers.slice(start, start + userPageSize);
+  }, [filteredUsers, userPage, userPageSize]);
+
+  // Filtered & Paginated Policies
+  const filteredPolicies = useMemo(() => {
+    return policies.filter((pol) => {
+      if (policyDeptFilter !== 'ALL' && pol.department_id !== policyDeptFilter) return false;
+      if (policySearch.trim()) {
+        const q = policySearch.toLowerCase();
+        return (
+          pol.department_name?.toLowerCase().includes(q) ||
+          pol.document_type_name?.toLowerCase().includes(q) ||
+          pol.security_level_name?.toLowerCase().includes(q) ||
+          pol.retention_policy_name?.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [policies, policyDeptFilter, policySearch]);
+
+  const totalPolicyPages = Math.max(1, Math.ceil(filteredPolicies.length / POLICY_PAGE_SIZE));
+  const paginatedPolicies = useMemo(() => {
+    const start = (policyPage - 1) * POLICY_PAGE_SIZE;
+    return filteredPolicies.slice(start, start + POLICY_PAGE_SIZE);
+  }, [filteredPolicies, policyPage]);
+
+  // Filtered & Paginated Retention Schedules
+  const filteredSchedules = useMemo(() => {
+    return retentionSchedules.filter((sch) => {
+      if (scheduleSearch.trim()) {
+        const q = scheduleSearch.toLowerCase();
+        return (
+          sch.name?.toLowerCase().includes(q) ||
+          sch.schedule_code?.toLowerCase().includes(q) ||
+          sch.statutory_framework?.toLowerCase().includes(q) ||
+          sch.action_on_expiry?.toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [retentionSchedules, scheduleSearch]);
+
+  const totalSchedulePages = Math.max(1, Math.ceil(filteredSchedules.length / SCHEDULE_PAGE_SIZE));
+  const paginatedSchedules = useMemo(() => {
+    const start = (schedulePage - 1) * SCHEDULE_PAGE_SIZE;
+    return filteredSchedules.slice(start, start + SCHEDULE_PAGE_SIZE);
+  }, [filteredSchedules, schedulePage]);
 
   // Handlers
   const handleEnrollSubmit = async (e: React.FormEvent) => {
@@ -1087,9 +1159,33 @@ export default function AdministrationView({
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={userDeptFilter}
+                  onChange={(e) => setUserDeptFilter(e.target.value)}
+                  className="h-8 px-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93] font-medium cursor-pointer"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={userStatusFilter}
+                  onChange={(e) => setUserStatusFilter(e.target.value)}
+                  className="h-8 px-3 bg-[#f0f3ff] border border-[#D8DEEA] rounded-full text-xs text-[#151c27] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#3f5e93] font-medium cursor-pointer"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="SUSPENDED">Suspended</option>
+                  <option value="DISABLED">Disabled</option>
+                </select>
+
                 <button
                   onClick={() => setEnrollModalOpen(true)}
-                  className="px-4 py-1.5 bg-[#000000] hover:bg-[#181c22] text-white text-xs font-medium rounded-full flex items-center gap-1.5 shadow-xs transition"
+                  className="px-4 py-1.5 bg-[#000000] hover:bg-[#181c22] text-white text-xs font-medium rounded-full flex items-center gap-1.5 shadow-xs transition cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">person_add</span>
                   <span>Enroll User</span>
@@ -1097,8 +1193,8 @@ export default function AdministrationView({
               </div>
             </div>
 
-            <div className="bg-white rounded-[20px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 overflow-hidden">
-              <div className="overflow-x-auto">
+            <div className="bg-white rounded-[20px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 overflow-hidden min-h-[480px] flex flex-col justify-between">
+              <div className="overflow-x-auto flex-1">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-[#f0f3ff]/60 text-[#6B7280] text-[10px] font-semibold uppercase tracking-wider border-b border-[#D8DEEA]/60">
                     <tr>
@@ -1113,17 +1209,23 @@ export default function AdministrationView({
                   <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="py-12 text-center text-[#6B7280]">
+                        <td colSpan={6} className="py-20 text-center text-[#6B7280]">
                           <span className="material-symbols-outlined text-[24px] animate-spin text-[#3f5e93] block mb-1">sync</span>
                           Loading user directory...
                         </td>
                       </tr>
                     ) : filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-10 text-center text-[#6B7280]">No users found</td>
+                        <td colSpan={6} className="py-16 text-center text-[#6B7280]">
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <span className="material-symbols-outlined text-[28px] text-[#9CA3AF]">person_off</span>
+                            <span className="font-medium text-xs text-[#10141A]">No users found</span>
+                            <span className="text-[11px] text-[#9CA3AF]">Try adjusting your search or filters.</span>
+                          </div>
+                        </td>
                       </tr>
                     ) : (
-                      filteredUsers.map((u) => {
+                      paginatedUsers.map((u) => {
                         const initials = (u.full_name || 'U')
                           .split(' ')
                           .map((n) => n[0])
@@ -1200,6 +1302,74 @@ export default function AdministrationView({
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {!loading && filteredUsers.length > 0 && (
+                <div className="p-3.5 bg-[#f0f3ff]/40 border-t border-[#D8DEEA]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#45474b]">
+                  <div className="flex items-center gap-2">
+                    <span>
+                      Showing <b>{(userPage - 1) * userPageSize + 1}–{Math.min(userPage * userPageSize, filteredUsers.length)}</b> of <b>{filteredUsers.length}</b> officers
+                    </span>
+                    <span>•</span>
+                    <span>Page <b>{userPage}</b> of <b>{totalUserPages}</b></span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* Rows per page */}
+                    <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280]">
+                      <span>Rows:</span>
+                      <select
+                        value={userPageSize}
+                        onChange={(e) => {
+                          setUserPageSize(parseInt(e.target.value, 10));
+                          setUserPage(1);
+                        }}
+                        className="h-7 px-2 bg-white border border-[#D8DEEA] rounded-md text-xs font-mono text-[#151c27] focus:outline-none cursor-pointer"
+                      >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setUserPage((p) => Math.max(1, p - 1))}
+                        disabled={userPage === 1}
+                        className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer text-xs"
+                      >
+                        Prev
+                      </button>
+
+                      {Array.from({ length: totalUserPages }, (_, i) => i + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          type="button"
+                          onClick={() => setUserPage(pageNum)}
+                          className={`w-6 h-6 rounded-full text-[11px] font-semibold cursor-pointer transition ${
+                            userPage === pageNum
+                              ? 'bg-[#000000] text-white shadow-2xs'
+                              : 'bg-white hover:bg-[#f0f3ff] text-[#151c27] border border-[#D8DEEA]'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => setUserPage((p) => Math.min(totalUserPages, p + 1))}
+                        disabled={userPage >= totalUserPages}
+                        className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer text-xs"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1651,8 +1821,8 @@ export default function AdministrationView({
                   </div>
                 </div>
 
-                <div className="bg-white rounded-[20px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 overflow-hidden">
-                  <div className="overflow-x-auto">
+                <div className="bg-white rounded-[20px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 overflow-hidden min-h-[440px] flex flex-col justify-between">
+                  <div className="overflow-x-auto flex-1">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-[#f0f3ff]/60 text-[#6B7280] text-[10px] font-semibold uppercase tracking-wider border-b border-[#D8DEEA]/60">
                         <tr>
@@ -1666,23 +1836,9 @@ export default function AdministrationView({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
-                        {policies
-                          .filter((pol) => {
-                            if (policyDeptFilter !== 'ALL' && pol.department_id !== policyDeptFilter) return false;
-                            if (policySearch.trim()) {
-                              const q = policySearch.toLowerCase();
-                              return (
-                                pol.department_name?.toLowerCase().includes(q) ||
-                                pol.document_type_name?.toLowerCase().includes(q) ||
-                                pol.security_level_name?.toLowerCase().includes(q) ||
-                                pol.retention_policy_name?.toLowerCase().includes(q)
-                              );
-                            }
-                            return true;
-                          })
-                          .length === 0 ? (
+                        {filteredPolicies.length === 0 ? (
                           <tr>
-                            <td colSpan={7} className="py-12 text-center text-[#6B7280]">
+                            <td colSpan={7} className="py-16 text-center text-[#6B7280]">
                               <div className="flex flex-col items-center justify-center gap-1">
                                 <span className="material-symbols-outlined text-[28px] text-[#9CA3AF]">policy</span>
                                 <span className="font-medium text-xs text-[#10141A]">No governance policies found</span>
@@ -1691,21 +1847,7 @@ export default function AdministrationView({
                             </td>
                           </tr>
                         ) : (
-                          policies
-                            .filter((pol) => {
-                              if (policyDeptFilter !== 'ALL' && pol.department_id !== policyDeptFilter) return false;
-                              if (policySearch.trim()) {
-                                const q = policySearch.toLowerCase();
-                                return (
-                                  pol.department_name?.toLowerCase().includes(q) ||
-                                  pol.document_type_name?.toLowerCase().includes(q) ||
-                                  pol.security_level_name?.toLowerCase().includes(q) ||
-                                  pol.retention_policy_name?.toLowerCase().includes(q)
-                                );
-                              }
-                              return true;
-                            })
-                            .map((pol) => (
+                          paginatedPolicies.map((pol) => (
                               <tr key={pol.id} className="hover:bg-[#f0f3ff]/40 transition">
                                 <td className="py-3 px-4">
                                   <div className="font-semibold text-[#10141A]">{pol.department_name}</div>
@@ -1797,6 +1939,47 @@ export default function AdministrationView({
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Policy Pagination Controls */}
+                  {filteredPolicies.length > POLICY_PAGE_SIZE && (
+                    <div className="p-3.5 bg-[#f0f3ff]/40 border-t border-[#D8DEEA]/60 flex items-center justify-between text-xs text-[#45474b]">
+                      <span>
+                        Showing <b>{(policyPage - 1) * POLICY_PAGE_SIZE + 1}–{Math.min(policyPage * POLICY_PAGE_SIZE, filteredPolicies.length)}</b> of <b>{filteredPolicies.length}</b> policies
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setPolicyPage((p) => Math.max(1, p - 1))}
+                          disabled={policyPage === 1}
+                          className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer text-xs"
+                        >
+                          Prev
+                        </button>
+                        {Array.from({ length: totalPolicyPages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setPolicyPage(pageNum)}
+                            className={`w-6 h-6 rounded-full text-[11px] font-semibold cursor-pointer transition ${
+                              policyPage === pageNum
+                                ? 'bg-[#000000] text-white shadow-2xs'
+                                : 'bg-white hover:bg-[#f0f3ff] text-[#151c27] border border-[#D8DEEA]'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setPolicyPage((p) => Math.min(totalPolicyPages, p + 1))}
+                          disabled={policyPage >= totalPolicyPages}
+                          className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer text-xs"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1830,8 +2013,8 @@ export default function AdministrationView({
                   </div>
                 </div>
 
-                <div className="bg-white rounded-[20px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 overflow-hidden">
-                  <div className="overflow-x-auto">
+                <div className="bg-white rounded-[20px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/60 overflow-hidden min-h-[440px] flex flex-col justify-between">
+                  <div className="overflow-x-auto flex-1">
                     <table className="w-full text-left text-xs">
                       <thead className="bg-[#f0f3ff]/60 text-[#6B7280] text-[10px] font-semibold uppercase tracking-wider border-b border-[#D8DEEA]/60">
                         <tr>
@@ -1844,22 +2027,9 @@ export default function AdministrationView({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
-                        {retentionSchedules
-                          .filter((sch) => {
-                            if (scheduleSearch.trim()) {
-                              const q = scheduleSearch.toLowerCase();
-                              return (
-                                sch.name?.toLowerCase().includes(q) ||
-                                sch.schedule_code?.toLowerCase().includes(q) ||
-                                sch.statutory_framework?.toLowerCase().includes(q) ||
-                                sch.action_on_expiry?.toLowerCase().includes(q)
-                              );
-                            }
-                            return true;
-                          })
-                          .length === 0 ? (
+                        {filteredSchedules.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="py-12 text-center text-[#6B7280]">
+                            <td colSpan={6} className="py-16 text-center text-[#6B7280]">
                               <div className="flex flex-col items-center justify-center gap-1">
                                 <span className="material-symbols-outlined text-[28px] text-[#9CA3AF]">hourglass_disabled</span>
                                 <span className="font-medium text-xs text-[#10141A]">No statutory schedules found</span>
@@ -1868,20 +2038,7 @@ export default function AdministrationView({
                             </td>
                           </tr>
                         ) : (
-                          retentionSchedules
-                            .filter((sch) => {
-                              if (scheduleSearch.trim()) {
-                                const q = scheduleSearch.toLowerCase();
-                                return (
-                                  sch.name?.toLowerCase().includes(q) ||
-                                  sch.schedule_code?.toLowerCase().includes(q) ||
-                                  sch.statutory_framework?.toLowerCase().includes(q) ||
-                                  sch.action_on_expiry?.toLowerCase().includes(q)
-                                );
-                              }
-                              return true;
-                            })
-                            .map((sch) => (
+                          paginatedSchedules.map((sch) => (
                               <tr key={sch.id} className="hover:bg-[#f0f3ff]/40 transition">
                                 <td className="py-3 px-4 font-mono font-bold text-xs text-[#3f5e93]">
                                   <span className="px-2 py-0.5 rounded-md bg-[#f0f3ff] border border-[#83A2DB]/40">
@@ -1950,6 +2107,47 @@ export default function AdministrationView({
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Retention Schedule Pagination Controls */}
+                  {filteredSchedules.length > SCHEDULE_PAGE_SIZE && (
+                    <div className="p-3.5 bg-[#f0f3ff]/40 border-t border-[#D8DEEA]/60 flex items-center justify-between text-xs text-[#45474b]">
+                      <span>
+                        Showing <b>{(schedulePage - 1) * SCHEDULE_PAGE_SIZE + 1}–{Math.min(schedulePage * SCHEDULE_PAGE_SIZE, filteredSchedules.length)}</b> of <b>{filteredSchedules.length}</b> schedules
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setSchedulePage((p) => Math.max(1, p - 1))}
+                          disabled={schedulePage === 1}
+                          className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer text-xs"
+                        >
+                          Prev
+                        </button>
+                        {Array.from({ length: totalSchedulePages }, (_, i) => i + 1).map((pageNum) => (
+                          <button
+                            key={pageNum}
+                            type="button"
+                            onClick={() => setSchedulePage(pageNum)}
+                            className={`w-6 h-6 rounded-full text-[11px] font-semibold cursor-pointer transition ${
+                              schedulePage === pageNum
+                                ? 'bg-[#000000] text-white shadow-2xs'
+                                : 'bg-white hover:bg-[#f0f3ff] text-[#151c27] border border-[#D8DEEA]'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setSchedulePage((p) => Math.min(totalSchedulePages, p + 1))}
+                          disabled={schedulePage >= totalSchedulePages}
+                          className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer text-xs"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
