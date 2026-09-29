@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentSession } from '@/lib/auth/jwt';
+import { isSuperAdmin } from '@/lib/auth/rbac';
 import { query } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -16,14 +17,41 @@ export async function GET(request: NextRequest) {
     const classification = searchParams.get('classification') || 'all';
     const holdState = searchParams.get('holdState') || 'all-holds';
     const sort = searchParams.get('sort') || 'expiry';
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get('limit') || '15', 10)));
+    const offset = (page - 1) * limit;
 
-    // 1. Fetch KPI metrics for the ribbon
+    const isSuper = isSuperAdmin(session);
+    const orgId = session.organizationId;
+
+    // 1. Fetch KPI metrics for the ribbon (scoped to active organization)
     const [totalRecordsRes, activeHoldsRes, policiesRes, pendingDisposalsRes] = await Promise.all([
-      query<{ count: string }>('SELECT COUNT(*) as count FROM retention_records'),
-      query<{ count: string }>('SELECT COUNT(*) as count FROM retention_records WHERE legal_hold = true'),
-      query<{ count: string }>('SELECT COUNT(*) as count FROM retention_policies'),
       query<{ count: string }>(
-        "SELECT COUNT(*) as count FROM deletion_requests WHERE status IN ('REQUESTED', 'PENDING_APPROVAL')"
+        `SELECT COUNT(r.id) as count 
+         FROM retention_records r 
+         JOIN documents d ON d.id = r.document_id 
+         WHERE (d.organization_id = $1 OR $2 = true)`,
+        [orgId, isSuper]
+      ),
+      query<{ count: string }>(
+        `SELECT COUNT(r.id) as count 
+         FROM retention_records r 
+         JOIN documents d ON d.id = r.document_id 
+         WHERE (d.organization_id = $1 OR $2 = true) AND r.legal_hold = true`,
+        [orgId, isSuper]
+      ),
+      query<{ count: string }>(
+        `SELECT COUNT(*) as count 
+         FROM retention_policies 
+         WHERE (organization_id = $1 OR $2 = true)`,
+        [orgId, isSuper]
+      ),
+      query<{ count: string }>(
+        `SELECT COUNT(dr.id) as count 
+         FROM deletion_requests dr 
+         JOIN documents d ON d.id = dr.document_id 
+         WHERE (d.organization_id = $1 OR $2 = true) AND dr.status IN ('REQUESTED', 'PENDING_APPROVAL')`,
+        [orgId, isSuper]
       ),
     ]);
 
@@ -34,8 +62,83 @@ export async function GET(request: NextRequest) {
       pendingDisposals: parseInt(pendingDisposalsRes[0]?.count || '0', 10),
     };
 
-    // 2. Query retention records with document and policy joins
-    let sql = `
+    // 2. Build Query with Filters & Pagination
+    let whereClause = ` WHERE (d.organization_id = $1 OR $2 = true)`;
+    const params: any[] = [orgId, isSuper];
+
+    // Search filter
+    if (search) {
+      params.push(`%${search}%`);
+      const idx = params.length;
+      whereClause += ` AND (
+        LOWER(d.document_number) LIKE $${idx} OR 
+        LOWER(d.title) LIKE $${idx} OR 
+        LOWER(COALESCE(r.legal_hold_order_number, '')) LIKE $${idx} OR
+        LOWER(COALESCE(r.legal_hold_authority, '')) LIKE $${idx}
+      )`;
+    }
+
+    // Classification filter
+    if (classification !== 'all') {
+      if (classification === 'fir') {
+        whereClause += ` AND (p.schedule_code = 'SCHEDULE_I' OR d.document_number LIKE '%FIR%')`;
+      } else if (classification === 'charge') {
+        whereClause += ` AND (p.schedule_code = 'SCHEDULE_II' OR d.document_number LIKE '%CHG%')`;
+      } else if (classification === 'forensics') {
+        whereClause += ` AND (p.schedule_code = 'SCHEDULE_III' OR d.document_number LIKE '%EVD%' OR d.document_number LIKE '%FOR%')`;
+      } else if (classification === 'diary') {
+        whereClause += ` AND (p.schedule_code = 'SCHEDULE_IV' OR d.document_number LIKE '%DIARY%' OR d.document_number LIKE '%DOC%')`;
+      } else if (classification === 'seizure') {
+        whereClause += ` AND (p.schedule_code = 'SCHEDULE_V' OR d.document_number LIKE '%SZR%')`;
+      } else {
+        params.push(classification);
+        const idx = params.length;
+        whereClause += ` AND (p.schedule_code = $${idx} OR p.id = $${idx})`;
+      }
+    }
+
+    // Hold State filter
+    if (holdState === 'active-only') {
+      whereClause += ` AND r.legal_hold = true`;
+    } else if (holdState === 'pending-shred') {
+      whereClause += ` AND (del.status IN ('REQUESTED', 'PENDING_APPROVAL') OR r.status = 'DISPOSAL_STAGED')`;
+    } else if (holdState === 'expiring') {
+      whereClause += ` AND r.legal_hold = false AND r.retention_end_at IS NOT NULL AND r.retention_end_at <= (now() + INTERVAL '365 days')`;
+    }
+
+    // 3. Get Total Filtered Count for Pagination
+    const countSql = `
+      SELECT COUNT(r.id) as total
+      FROM retention_records r
+      JOIN documents d ON d.id = r.document_id
+      LEFT JOIN retention_policies p ON p.id = r.retention_policy_id
+      LEFT JOIN LATERAL (
+        SELECT id, status
+        FROM deletion_requests
+        WHERE document_id = d.id
+        ORDER BY requested_at DESC
+        LIMIT 1
+      ) del ON true
+      ${whereClause};
+    `;
+    const countRes = await query<{ total: string }>(countSql, params);
+    const totalFiltered = parseInt(countRes[0]?.total || '0', 10);
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / limit));
+
+    // 4. Sorting
+    let orderSql = ` ORDER BY r.retention_end_at ASC NULLS LAST`;
+    if (sort === 'hold') {
+      orderSql = ` ORDER BY r.legal_hold DESC, r.retention_start_at DESC`;
+    } else if (sort === 'age') {
+      orderSql = ` ORDER BY r.retention_start_at ASC`;
+    }
+
+    // 5. Query Filtered & Paginated Records
+    const queryParams = [...params, limit, offset];
+    const limitIdx = queryParams.length - 1;
+    const offsetIdx = queryParams.length;
+
+    const sql = `
       SELECT 
         r.id as record_id,
         r.document_id,
@@ -86,59 +189,12 @@ export async function GET(request: NextRequest) {
         LIMIT 1
       ) del ON true
       LEFT JOIN users u_req ON u_req.id = del.requested_by
-      WHERE 1=1
+      ${whereClause}
+      ${orderSql}
+      LIMIT $${limitIdx} OFFSET $${offsetIdx};
     `;
 
-    const params: any[] = [];
-
-    // Search filter
-    if (search) {
-      params.push(`%${search}%`);
-      const idx = params.length;
-      sql += ` AND (
-        LOWER(d.document_number) LIKE $${idx} OR 
-        LOWER(d.title) LIKE $${idx} OR 
-        LOWER(COALESCE(r.legal_hold_order_number, '')) LIKE $${idx} OR
-        LOWER(COALESCE(r.legal_hold_authority, '')) LIKE $${idx}
-      )`;
-    }
-
-    // Classification filter
-    if (classification !== 'all') {
-      if (classification === 'fir') {
-        sql += ` AND (p.schedule_code = 'SCHEDULE_I' OR d.document_number LIKE '%FIR%')`;
-      } else if (classification === 'charge') {
-        sql += ` AND (p.schedule_code = 'SCHEDULE_II' OR d.document_number LIKE '%CHG%')`;
-      } else if (classification === 'forensics') {
-        sql += ` AND (p.schedule_code = 'SCHEDULE_III' OR d.document_number LIKE '%EVD%' OR d.document_number LIKE '%FOR%')`;
-      } else if (classification === 'diary') {
-        sql += ` AND (p.schedule_code = 'SCHEDULE_IV' OR d.document_number LIKE '%DIARY%' OR d.document_number LIKE '%DOC%')`;
-      } else if (classification === 'seizure') {
-        sql += ` AND (p.schedule_code = 'SCHEDULE_V' OR d.document_number LIKE '%SZR%')`;
-      }
-    }
-
-    // Hold State filter
-    if (holdState === 'active-only') {
-      sql += ` AND r.legal_hold = true`;
-    } else if (holdState === 'pending-shred') {
-      sql += ` AND (del.status IN ('REQUESTED', 'PENDING_APPROVAL') OR r.status = 'DISPOSAL_STAGED')`;
-    } else if (holdState === 'expiring') {
-      sql += ` AND r.legal_hold = false AND r.retention_end_at IS NOT NULL AND r.retention_end_at <= (now() + INTERVAL '365 days')`;
-    }
-
-    // Sorting
-    if (sort === 'expiry') {
-      sql += ` ORDER BY r.retention_end_at ASC NULLS LAST`;
-    } else if (sort === 'hold') {
-      sql += ` ORDER BY r.legal_hold DESC, r.retention_start_at DESC`;
-    } else if (sort === 'age') {
-      sql += ` ORDER BY r.retention_start_at ASC`;
-    } else {
-      sql += ` ORDER BY r.retention_end_at ASC NULLS LAST`;
-    }
-
-    const rows = await query<any>(sql, params);
+    const rows = await query<any>(sql, queryParams);
 
     const records = rows.map((r) => {
       const startMs = new Date(r.retention_start_at).getTime();
@@ -206,6 +262,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       stats,
+      pagination: {
+        total: totalFiltered,
+        page,
+        limit,
+        totalPages,
+      },
       records,
     });
   } catch (error: any) {

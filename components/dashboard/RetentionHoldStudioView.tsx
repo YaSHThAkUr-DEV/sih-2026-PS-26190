@@ -89,6 +89,16 @@ export default function RetentionHoldStudioView({
   });
   const [loading, setLoading] = useState(true);
 
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 1,
+  });
+
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
   const [classificationFilter, setClassificationFilter] = useState('all');
@@ -215,32 +225,42 @@ export default function RetentionHoldStudioView({
     }
   };
 
-  // Fetch records
-  const loadRecords = async (overrideSearch?: string) => {
+  // Fetch records with pagination
+  const loadRecords = async (overridePage?: number, overrideSearch?: string) => {
     setLoading(true);
     try {
+      const activePage = overridePage !== undefined ? overridePage : page;
       const params = new URLSearchParams();
       const effectiveSearch = overrideSearch !== undefined ? overrideSearch : searchQuery;
       if (effectiveSearch) params.set('search', effectiveSearch);
       if (classificationFilter !== 'all') params.set('classification', classificationFilter);
       if (holdFilter !== 'all-holds') params.set('holdState', holdFilter);
       if (sortOption) params.set('sort', sortOption);
+      params.set('page', activePage.toString());
+      params.set('limit', pageSize.toString());
 
       const res = await fetch(`/api/retention/records?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setRecords(data.records || []);
         if (data.stats) setStats(data.stats);
+        if (data.pagination) {
+          setPagination(data.pagination);
+          setPage(data.pagination.page);
+        }
 
         // Set default selected record
-        if (!selectedRecord && data.records?.length > 0) {
+        if (data.records?.length > 0) {
           const staged = data.records.find(
             (r: RetentionRecordItem) => r.deletionRequest?.status === 'PENDING_APPROVAL' || r.displayStatus === 'DISPOSAL_STAGED'
           );
-          setSelectedRecord(staged || data.records[0]);
-        } else if (selectedRecord) {
-          const updated = data.records.find((r: RetentionRecordItem) => r.recordId === selectedRecord.recordId);
-          if (updated) setSelectedRecord(updated);
+          setSelectedRecord((prev) => {
+            if (!prev) return staged || data.records[0];
+            const updated = data.records.find((r: RetentionRecordItem) => r.recordId === prev.recordId);
+            return updated || staged || data.records[0];
+          });
+        } else {
+          setSelectedRecord(null);
         }
       }
     } catch (e) {
@@ -253,12 +273,12 @@ export default function RetentionHoldStudioView({
 
   useEffect(() => {
     loadPolicies();
-    loadRecords();
-  }, [classificationFilter, holdFilter, sortOption]);
+    loadRecords(1);
+  }, [classificationFilter, holdFilter, sortOption, pageSize]);
 
   const handleSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      loadRecords();
+      loadRecords(1);
     }
   };
 
@@ -677,30 +697,44 @@ export default function RetentionHoldStudioView({
             <div className="p-4 bg-[#f0f3ff]/40 border-b border-[#D8DEEA]/60 space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h2 className="text-xs font-semibold text-[#10141A]">Preservation & Lifecycle Ledger</h2>
+                  <h2 className="text-xs font-semibold text-[#10141A]">Preservation &amp; Lifecycle Ledger</h2>
                   <p className="text-[11px] text-[#6B7280]">Active preservation locks, elapsed periods, and disposal eligibility.</p>
                 </div>
                 <span className="rounded-full text-[10px] font-medium px-2.5 py-0.5 bg-[#E9ECF4] text-[#6B7280] font-mono">
-                  {records.length} of {stats.totalRecords} Records
+                  Showing {records.length} of {pagination.total} Records (Page {pagination.page}/{pagination.totalPages || 1})
                 </span>
               </div>
 
               {/* Filters */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                <div className="md:col-span-5">
+                <div className="md:col-span-4">
                   <UiverseSearchBar
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onSubmit={() => loadRecords()}
+                    onSubmit={() => loadRecords(1)}
                     placeholder="Search Docket, Title, Lock Ref..."
                     onClear={() => {
                       setSearchQuery('');
-                      loadRecords('');
+                      loadRecords(1, '');
                     }}
                     compact
                   />
                 </div>
-                <div className="md:col-span-4">
+                <div className="md:col-span-3">
+                  <select
+                    value={classificationFilter}
+                    onChange={(e) => setClassificationFilter(e.target.value)}
+                    className="w-full h-8 px-3 bg-white border border-[#D8DEEA] text-xs text-[#151c27] rounded-full focus:outline-none cursor-pointer"
+                  >
+                    <option value="all">All Statutory Schedules</option>
+                    {policies.map((p) => (
+                      <option key={p.id} value={p.scheduleCode}>
+                        {p.name} ({p.scheduleCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="md:col-span-3">
                   <select
                     value={holdFilter}
                     onChange={(e) => setHoldFilter(e.target.value)}
@@ -712,15 +746,15 @@ export default function RetentionHoldStudioView({
                     <option value="pending-shred">Disposal Staged ({stats.pendingDisposals})</option>
                   </select>
                 </div>
-                <div className="md:col-span-3">
+                <div className="md:col-span-2">
                   <select
                     value={sortOption}
                     onChange={(e) => setSortOption(e.target.value)}
                     className="w-full h-8 px-3 bg-white border border-[#D8DEEA] text-xs text-[#151c27] rounded-full focus:outline-none cursor-pointer"
                   >
-                    <option value="expiry">Sort: Expiry (Soonest)</option>
-                    <option value="hold">Sort: Lock Priority</option>
-                    <option value="age">Sort: Age (Oldest)</option>
+                    <option value="expiry">Sort: Expiry</option>
+                    <option value="hold">Sort: Lock</option>
+                    <option value="age">Sort: Age</option>
                   </select>
                 </div>
               </div>
@@ -863,6 +897,61 @@ export default function RetentionHoldStudioView({
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="p-3.5 bg-[#f0f3ff]/40 border-t border-[#D8DEEA]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-[#45474b]">
+              <div className="flex items-center gap-2">
+                <span>
+                  Showing <b>{records.length}</b> of <b>{pagination.total}</b> records
+                </span>
+                <span>•</span>
+                <span>Page <b>{pagination.page}</b> of <b>{pagination.totalPages || 1}</b></span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Rows per page selector */}
+                <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280]">
+                  <span>Rows:</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      const newSize = parseInt(e.target.value, 10);
+                      setPageSize(newSize);
+                    }}
+                    className="h-7 px-2 bg-white border border-[#D8DEEA] rounded-md text-xs font-mono text-[#151c27] focus:outline-none cursor-pointer"
+                  >
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      if (page > 1) loadRecords(page - 1);
+                    }}
+                    disabled={page <= 1 || loading}
+                    className="px-3 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer text-xs"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-2 font-mono font-bold text-[#151c27]">
+                    {pagination.page} / {pagination.totalPages || 1}
+                  </span>
+                  <button
+                    onClick={() => {
+                      if (page < pagination.totalPages) loadRecords(page + 1);
+                    }}
+                    disabled={page >= pagination.totalPages || loading}
+                    className="px-3 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed font-semibold transition cursor-pointer text-xs"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
