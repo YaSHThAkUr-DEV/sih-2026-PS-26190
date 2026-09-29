@@ -62,6 +62,32 @@ export interface OverviewDashboardViewProps {
   documents: CaseDocument[];
   activity?: AuditEventItem[];
   systemHealth?: any;
+  canDo?: {
+    viewDocuments?: boolean;
+    uploadDocument?: boolean;
+    viewOcr?: boolean;
+    manageUsers?: boolean;
+    manageDepartments?: boolean;
+    showPersonnelSection?: boolean;
+    viewApprovals?: boolean;
+    viewRetention?: boolean;
+    viewAudit?: boolean;
+    viewBlockchain?: boolean;
+    viewJobs?: boolean;
+    viewCollaboration?: boolean;
+    viewFedAudit?: boolean;
+    viewFedAdmin?: boolean;
+    viewOrganizations?: boolean;
+    viewSystemSettings?: boolean;
+  };
+  features?: {
+    feature_approvals?: boolean;
+    feature_section_65b?: boolean;
+    feature_retention_holds?: boolean;
+    feature_blockchain?: boolean;
+    feature_deep_ocr?: boolean;
+    feature_inter_org_collaboration?: boolean;
+  };
   onNavigate: (view: any) => void;
   onOpenUpload: () => void;
   onSelectDoc?: (doc: CaseDocument) => void;
@@ -78,6 +104,8 @@ export default function OverviewDashboardView({
   documents = [],
   activity = [],
   systemHealth,
+  canDo,
+  features,
   onNavigate,
   onOpenUpload,
   onSelectDoc,
@@ -249,16 +277,18 @@ export default function OverviewDashboardView({
             <span>Quick Search</span>
           </button>
 
-          <button
-            onClick={onOpenUpload}
-            className="h-10 px-5 rounded-full bg-[#000000] text-white hover:bg-[#181c22] transition-all shadow-[0_6px_18px_rgba(16,20,26,0.22)] flex items-center gap-2 text-[13px] font-medium group cursor-pointer"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[18px] group-hover:-translate-y-0.5 transition-transform">
-              upload_file
-            </span>
-            <span>+ Ingest Record</span>
-          </button>
+          {canDo?.uploadDocument && (
+            <button
+              onClick={onOpenUpload}
+              className="h-10 px-5 rounded-full bg-[#000000] text-white hover:bg-[#181c22] transition-all shadow-[0_6px_18px_rgba(16,20,26,0.22)] flex items-center gap-2 text-[13px] font-medium group cursor-pointer"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px] group-hover:-translate-y-0.5 transition-transform">
+                upload_file
+              </span>
+              <span>+ Ingest Record</span>
+            </button>
+          )}
         </div>
       </section>
 
@@ -266,8 +296,12 @@ export default function OverviewDashboardView({
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Total Documents */}
         <div
-          onClick={() => onNavigate('documents')}
-          className="bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03),0_8px_24px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/60 flex flex-col justify-between gap-4 group hover:shadow-[0_8px_30px_rgba(16,20,26,0.08)] transition-all cursor-pointer"
+          onClick={() => {
+            if (canDo?.viewDocuments !== false) onNavigate('documents');
+          }}
+          className={`bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03),0_8px_24px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/60 flex flex-col justify-between gap-4 group hover:shadow-[0_8px_30px_rgba(16,20,26,0.08)] transition-all ${
+            canDo?.viewDocuments !== false ? 'cursor-pointer' : ''
+          }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-medium text-[#45474b]">Active Documents</span>
@@ -315,8 +349,12 @@ export default function OverviewDashboardView({
 
         {/* Card 3: Pending Approvals */}
         <div
-          onClick={() => onNavigate('approvals')}
-          className="bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03),0_8px_24px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/60 flex flex-col justify-between gap-4 group hover:shadow-[0_8px_30px_rgba(16,20,26,0.08)] transition-all cursor-pointer"
+          onClick={() => {
+            if (canDo?.viewApprovals && features?.feature_approvals) onNavigate('approvals');
+          }}
+          className={`bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03),0_8px_24px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/60 flex flex-col justify-between gap-4 group hover:shadow-[0_8px_30px_rgba(16,20,26,0.08)] transition-all ${
+            canDo?.viewApprovals && features?.feature_approvals ? 'cursor-pointer' : 'opacity-90'
+          }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-medium text-[#45474b]">Pending Approvals</span>
@@ -343,8 +381,12 @@ export default function OverviewDashboardView({
 
         {/* Card 4: Audit Logs Count */}
         <div
-          onClick={() => onNavigate('audit')}
-          className="bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03),0_8px_24px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/60 flex flex-col justify-between gap-4 group hover:shadow-[0_8px_30px_rgba(16,20,26,0.08)] transition-all cursor-pointer"
+          onClick={() => {
+            if (canDo?.viewAudit) onNavigate('audit');
+          }}
+          className={`bg-white rounded-[20px] p-5 shadow-[0_2px_8px_rgba(16,20,26,0.03),0_8px_24px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/60 flex flex-col justify-between gap-4 group hover:shadow-[0_8px_30px_rgba(16,20,26,0.08)] transition-all ${
+            canDo?.viewAudit ? 'cursor-pointer' : 'opacity-90'
+          }`}
         >
           <div className="flex items-center justify-between">
             <span className="text-[13px] font-medium text-[#45474b]">Immutable Logs</span>
@@ -617,46 +659,54 @@ export default function OverviewDashboardView({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => onNavigate('documents')}
-            className="h-9 px-4 rounded-full bg-white hover:bg-[#e7eefe] text-[#151c27] transition-all shadow-xs border border-[#D8DEEA]/60 flex items-center gap-2 text-[13px] font-medium cursor-pointer"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[17px] text-[#3f5e93]">folder</span>
-            <span>Vault File Browser</span>
-          </button>
+          {canDo?.viewDocuments !== false && (
+            <button
+              onClick={() => onNavigate('documents')}
+              className="h-9 px-4 rounded-full bg-white hover:bg-[#e7eefe] text-[#151c27] transition-all shadow-xs border border-[#D8DEEA]/60 flex items-center gap-2 text-[13px] font-medium cursor-pointer"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[17px] text-[#3f5e93]">folder</span>
+              <span>Vault File Browser</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => onNavigate('approvals')}
-            className="h-9 px-4 rounded-full bg-white hover:bg-[#e7eefe] text-[#151c27] transition-all shadow-xs border border-[#D8DEEA]/60 flex items-center gap-2 text-[13px] font-medium cursor-pointer"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[17px] text-[#ca6666]">draw</span>
-            <span>Signature Queue</span>
-            {totalPendingApprovals > 0 && (
-              <span className="text-[11px] font-medium bg-[rgba(206,105,105,0.14)] text-[#ca6666] px-1.5 py-0.5 rounded-full font-mono font-bold">
-                {totalPendingApprovals}
-              </span>
-            )}
-          </button>
+          {canDo?.viewApprovals && features?.feature_approvals && (
+            <button
+              onClick={() => onNavigate('approvals')}
+              className="h-9 px-4 rounded-full bg-white hover:bg-[#e7eefe] text-[#151c27] transition-all shadow-xs border border-[#D8DEEA]/60 flex items-center gap-2 text-[13px] font-medium cursor-pointer"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[17px] text-[#ca6666]">draw</span>
+              <span>Signature Queue</span>
+              {totalPendingApprovals > 0 && (
+                <span className="text-[11px] font-medium bg-[rgba(206,105,105,0.14)] text-[#ca6666] px-1.5 py-0.5 rounded-full font-mono font-bold">
+                  {totalPendingApprovals}
+                </span>
+              )}
+            </button>
+          )}
 
-          <button
-            onClick={() => onNavigate('audit')}
-            className="h-9 px-4 rounded-full bg-white hover:bg-[#e7eefe] text-[#151c27] transition-all shadow-xs border border-[#D8DEEA]/60 flex items-center gap-2 text-[13px] font-medium cursor-pointer"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[17px] text-[#3f5e93]">fact_check</span>
-            <span>Compliance Audit Log</span>
-          </button>
+          {canDo?.viewAudit && (
+            <button
+              onClick={() => onNavigate('audit')}
+              className="h-9 px-4 rounded-full bg-white hover:bg-[#e7eefe] text-[#151c27] transition-all shadow-xs border border-[#D8DEEA]/60 flex items-center gap-2 text-[13px] font-medium cursor-pointer"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[17px] text-[#3f5e93]">fact_check</span>
+              <span>Compliance Audit Log</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => onNavigate('admin')}
-            className="h-9 px-4 rounded-full bg-white hover:bg-[#e7eefe] text-[#151c27] transition-all shadow-xs border border-[#D8DEEA]/60 flex items-center gap-2 text-[13px] font-medium cursor-pointer"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-[17px] text-[#45474b]">admin_panel_settings</span>
-            <span>Access Control Matrix</span>
-          </button>
+          {canDo?.viewSystemSettings && (
+            <button
+              onClick={() => onNavigate('admin')}
+              className="h-9 px-4 rounded-full bg-white hover:bg-[#e7eefe] text-[#151c27] transition-all shadow-xs border border-[#D8DEEA]/60 flex items-center gap-2 text-[13px] font-medium cursor-pointer"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[17px] text-[#45474b]">admin_panel_settings</span>
+              <span>Access Control Matrix</span>
+            </button>
+          )}
         </div>
       </section>
     </div>

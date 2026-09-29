@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 interface EvidenceIngestionProps {
   onSuccess: () => void;
   onCancel: () => void;
+  canUpload?: boolean;
   userDepartment?: string;
   userDesignation?: string;
   userEmployeeCode?: string;
@@ -87,6 +88,7 @@ interface BulkFileItem {
 export default function EvidenceIngestionView({
   onSuccess,
   onCancel,
+  canUpload = true,
   userDepartment = '',
   userDesignation = '',
   userEmployeeCode = '',
@@ -506,6 +508,30 @@ export default function EvidenceIngestionView({
   };
 
   const isAllBulkComplete = bulkFiles.length > 0 && bulkFiles.every((f) => f.status === 'SUCCESS' || f.status === 'ERROR');
+
+  if (!canUpload) {
+    return (
+      <div className="flex flex-col gap-6 max-w-3xl mx-auto pb-12 font-sans text-[#151c27]">
+        <div className="bg-white rounded-[26px] p-8 shadow-xs border border-red-200 flex flex-col items-center text-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-red-50 text-red-600 flex items-center justify-center border border-red-200">
+            <span className="material-symbols-outlined text-3xl">lock</span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-bold text-[#151c27]">Document Ingestion Restricted</h2>
+            <p className="text-xs text-[#45474b] max-w-md">
+              Your assigned role and permissions do not include <b>DOCUMENT_CREATE</b> privileges. Please contact your organization administrator if you require upload authorization.
+            </p>
+          </div>
+          <button
+            onClick={onCancel}
+            className="h-10 px-6 rounded-full bg-[#000000] text-white text-xs font-semibold hover:bg-[#181c22] transition cursor-pointer"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-5xl mx-auto pb-12 font-sans text-[#151c27]">

@@ -955,13 +955,15 @@ export default function DashboardPage() {
               )}
             </button>
 
-            <button
-              onClick={() => setActiveView('upload')}
-              className="h-9 px-4 bg-[#000000] text-white hover:bg-[#181c22] text-xs font-semibold rounded-full shadow-[0_6px_18px_rgba(16,20,26,0.22)] flex items-center gap-1.5 transition cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[16px]">upload_file</span>
-              <span className="hidden sm:inline">Upload</span>
-            </button>
+            {canDo.uploadDocument && (
+              <button
+                onClick={() => setActiveView('upload')}
+                className="h-9 px-4 bg-[#000000] text-white hover:bg-[#181c22] text-xs font-semibold rounded-full shadow-[0_6px_18px_rgba(16,20,26,0.22)] flex items-center gap-1.5 transition cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                <span className="hidden sm:inline">Upload</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -977,6 +979,8 @@ export default function DashboardPage() {
               documents={documents}
               activity={activity}
               systemHealth={systemHealth}
+              canDo={canDo}
+              features={features}
               onNavigate={(v) => setActiveView(v)}
               onOpenUpload={() => setActiveView('upload')}
               onSelectDoc={(doc) => setSelectedDoc(doc)}
@@ -1027,13 +1031,15 @@ export default function DashboardPage() {
                     <span className="material-symbols-outlined text-[16px] text-[#3f5e93]">tag</span>
                     <span>Verify Hash</span>
                   </button>
-                  <button
-                    onClick={() => setActiveView('upload')}
-                    className="btn-uiverse btn-uiverse-primary h-10 px-5"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">upload_file</span>
-                    <span>+ Upload Document</span>
-                  </button>
+                  {canDo.uploadDocument && (
+                    <button
+                      onClick={() => setActiveView('upload')}
+                      className="btn-uiverse btn-uiverse-primary h-10 px-5"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                      <span>+ Upload Document</span>
+                    </button>
+                  )}
                 </div>
               </section>
 
@@ -1249,6 +1255,7 @@ export default function DashboardPage() {
                 showToast('Document successfully uploaded and encrypted!');
               }}
               onCancel={() => setActiveView('overview')}
+              canUpload={canDo.uploadDocument}
               userDepartment={user?.department?.name}
               userDesignation={user?.designation}
               userEmployeeCode={user?.employeeCode}
