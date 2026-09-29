@@ -17,8 +17,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
     }
 
-    if (!isAdmin(session)) {
-      return NextResponse.json({ error: 'Forbidden: Admin clearance required' }, { status: 403 });
+    if (!isSuperAdmin(session)) {
+      return NextResponse.json({ error: 'Forbidden: System Super Administrator clearance required' }, { status: 403 });
     }
 
     const { id: orgId } = await params;
@@ -301,8 +301,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 });
     }
 
-    if (!isAdmin(session)) {
-      return NextResponse.json({ error: 'Forbidden: Admin clearance required' }, { status: 403 });
+    if (!isSuperAdmin(session)) {
+      return NextResponse.json({ error: 'Forbidden: System Super Administrator clearance required' }, { status: 403 });
     }
 
     const { id: orgId } = await params;

@@ -197,7 +197,7 @@ export function Section65BCertificateModal({
 
   return (
     <div className="fixed inset-0 z-50 bg-[#10141A]/50 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 overflow-y-auto font-sans text-[#151c27]">
-      <div 
+      <div
         className="bg-white w-full max-w-4xl rounded-[26px] shadow-2xl border border-[#D8DEEA] flex flex-col max-h-[92vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -239,8 +239,8 @@ export function Section65BCertificateModal({
               <p className="font-bold">Error: {error || 'Failed to assemble certificate'}</p>
             </div>
           ) : (
-            <div 
-              id="section-65b-printable-certificate" 
+            <div
+              id="section-65b-printable-certificate"
               className="border-4 border-double border-slate-800 p-6 sm:p-8 flex flex-col gap-6 text-slate-900 bg-white"
               style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }}
             >

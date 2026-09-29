@@ -262,9 +262,9 @@ export default function DashboardPage() {
       respondCollaboration: has('INTER_ORG_RESPOND', 'DOCUMENT_APPROVE', 'PERMISSION_MANAGE'),
       viewFedAudit:      has('INTER_ORG_AUDIT_VIEW', 'AUDIT_VIEW', 'PERMISSION_MANAGE'),
       exportFedAudit:    has('INTER_ORG_AUDIT_EXPORT', 'AUDIT_EXPORT', 'PERMISSION_MANAGE'),
-      viewFedAdmin:      has('FEDERATION_MANAGE', 'PERMISSION_MANAGE') || isSuperAdmin,
-      viewOrganizations: has('FEDERATION_VIEW', 'FEDERATION_MANAGE', 'PERMISSION_MANAGE', 'USER_MANAGE', 'DEPARTMENT_MANAGE') || isSuperAdmin,
-      manageOrganizations: has('FEDERATION_MANAGE', 'PERMISSION_MANAGE') || isSuperAdmin,
+      viewFedAdmin:      isSuperAdmin,
+      viewOrganizations: isSuperAdmin,
+      manageOrganizations: isSuperAdmin,
       // Administration
       viewSystemSettings: has('PERMISSION_MANAGE'),
     };

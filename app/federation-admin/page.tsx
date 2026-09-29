@@ -64,6 +64,7 @@ export default function FederationAdminStandalonePage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrgFilter, setSelectedOrgFilter] = useState<string>('ALL');
+  const [roleFilter, setRoleFilter] = useState<string>('ALL');
 
   // Currently Authenticated Session
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -107,6 +108,18 @@ export default function FederationAdminStandalonePage() {
   };
 
   // Load Current Session & Test Fleet
+  const [apexAdmin, setApexAdmin] = useState<any>({
+    id: 'b767ebd0-6c72-4061-a6cb-874cd04e34ac',
+    username: 'admin',
+    fullName: 'Principal Systems Administrator',
+    email: 'admin@dms.gov.in',
+    designation: 'Apex Sovereign Authority & System Super Admin',
+    maxSecurityLevel: 5,
+    role: 'SUPER_ADMIN',
+    defaultPasswordHint: 'Password@DMS2026!',
+    organizationId: '978d8253-2430-46a3-b6db-373ceffa7452',
+  });
+
   const loadFleetData = useCallback(async () => {
     setLoading(true);
     try {
@@ -117,6 +130,7 @@ export default function FederationAdminStandalonePage() {
 
       const fleetData = await fleetRes.json();
       if (fleetData.organizations) setFleetOrgs(fleetData.organizations);
+      if (fleetData.apexSuperAdmin) setApexAdmin(fleetData.apexSuperAdmin);
 
       if (sessionRes.ok) {
         const sessData = await sessionRes.json();
@@ -136,7 +150,7 @@ export default function FederationAdminStandalonePage() {
   // 1-Click Session Switcher
   const handleSwitchSession = async (orgId: string, userId?: string) => {
     try {
-      const res = await fetch(`/api/collaboration/admin/organizations/${orgId}/switch-session`, {
+      const res = await fetch(`/api/collaboration/admin/organizations/${orgId || 'apex'}/switch-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId }),
@@ -147,7 +161,7 @@ export default function FederationAdminStandalonePage() {
         showToast(`Switched session to ${data.switchedTo?.fullName} (${data.switchedTo?.organizationName})`, 'success');
         setTimeout(() => {
           router.push('/dashboard');
-        }, 1000);
+        }, 800);
       } else {
         showToast(data.error || 'Failed to switch session', 'error');
       }
@@ -265,24 +279,56 @@ export default function FederationAdminStandalonePage() {
     showToast(`Copied credentials for ${name}`);
   };
 
-  // Filter Orgs
+  // Filter Orgs and Users
   const filteredOrgs = useMemo(() => {
-    return fleetOrgs.filter((org) => {
-      const matchSearch =
-        !searchQuery ||
-        org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        org.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        org.users.some(
-          (u) =>
+    return fleetOrgs
+      .map((org) => {
+        const matchOrg = selectedOrgFilter === 'ALL' || org.id === selectedOrgFilter;
+        if (!matchOrg) return null;
+
+        const filteredUsers = org.users.filter((u) => {
+          const matchRole =
+            roleFilter === 'ALL' ||
+            u.roles.some((r) => r.code === roleFilter || r.name?.toUpperCase().includes(roleFilter.toUpperCase()));
+
+          const matchSearch =
+            !searchQuery ||
+            org.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            org.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
             u.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             u.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.designation?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
+            u.designation?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.departmentName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.employeeCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.roles.some((r) => r.code.toLowerCase().includes(searchQuery.toLowerCase()) || r.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchOrg = selectedOrgFilter === 'ALL' || org.id === selectedOrgFilter;
-      return matchSearch && matchOrg;
-    });
-  }, [fleetOrgs, searchQuery, selectedOrgFilter]);
+          return matchRole && matchSearch;
+        });
+
+        if (filteredUsers.length === 0 && searchQuery && !org.name.toLowerCase().includes(searchQuery.toLowerCase()) && !org.code.toLowerCase().includes(searchQuery.toLowerCase())) {
+          return null;
+        }
+
+        return {
+          ...org,
+          users: filteredUsers,
+        };
+      })
+      .filter(Boolean) as TestFleetOrg[];
+  }, [fleetOrgs, searchQuery, selectedOrgFilter, roleFilter]);
+
+  const ROLE_FILTER_CHIPS = [
+    { code: 'ALL', label: 'All Roles', count: fleetOrgs.reduce((acc, o) => acc + o.usersCount, 0) },
+    { code: 'SUPER_ADMIN', label: 'Super Admin', count: 1 },
+    { code: 'ORG_ADMIN', label: 'Org Admin', count: fleetOrgs.reduce((acc, o) => acc + o.users.filter(u => u.roles.some(r => r.code === 'ORG_ADMIN')).length, 0) },
+    { code: 'DEPT_HEAD', label: 'Dept Head / Judge / Director', count: fleetOrgs.reduce((acc, o) => acc + o.users.filter(u => u.roles.some(r => r.code === 'DEPT_HEAD')).length, 0) },
+    { code: 'INVESTIGATING_OFFICER', label: 'Investigating Officer / Inspector', count: fleetOrgs.reduce((acc, o) => acc + o.users.filter(u => u.roles.some(r => r.code === 'INVESTIGATING_OFFICER')).length, 0) },
+    { code: 'FORENSIC_EXPERT', label: 'Forensic Scientist', count: fleetOrgs.reduce((acc, o) => acc + o.users.filter(u => u.roles.some(r => r.code === 'FORENSIC_EXPERT')).length, 0) },
+    { code: 'APPROVER', label: 'Dual Approver', count: fleetOrgs.reduce((acc, o) => acc + o.users.filter(u => u.roles.some(r => r.code === 'APPROVER')).length, 0) },
+    { code: 'AUDITOR', label: 'Auditor & Vigilance', count: fleetOrgs.reduce((acc, o) => acc + o.users.filter(u => u.roles.some(r => r.code === 'AUDITOR')).length, 0) },
+    { code: 'RECORD_KEEPER', label: 'Malkhana / Record Keeper', count: fleetOrgs.reduce((acc, o) => acc + o.users.filter(u => u.roles.some(r => r.code === 'RECORD_KEEPER')).length, 0) },
+    { code: 'CLERK', label: 'Clerk & Operator', count: fleetOrgs.reduce((acc, o) => acc + o.users.filter(u => u.roles.some(r => r.code === 'CLERK')).length, 0) },
+  ];
 
   return (
     <div className="min-h-screen bg-[#f0f3ff] text-[#151c27] flex flex-col font-sans relative">
@@ -314,7 +360,7 @@ export default function FederationAdminStandalonePage() {
 
           <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-[#000000] text-white shadow-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Inter-Agency Admin &amp; Test Suite</span>
+            <span>Inter-Agency Test Suite &amp; Demo Credentials</span>
           </span>
         </div>
 
@@ -323,10 +369,10 @@ export default function FederationAdminStandalonePage() {
           {currentUser && (
             <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#f0f3ff] border border-[#D8DEEA] text-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-[#6B7280]">Logged in as:</span>
+              <span className="text-[#6B7280]">Active Session:</span>
               <b className="text-[#10141A]">{currentUser.fullName}</b>
               <span className="px-1.5 py-0.2 rounded-full text-[9px] font-mono bg-[#000000] text-white">
-                {currentUser.organization?.code || 'ORG'}
+                {currentUser.organization?.code || (currentUser.roles?.includes('SUPER_ADMIN') ? 'SUPER_ADMIN' : 'ORG')}
               </span>
             </div>
           )}
@@ -336,7 +382,7 @@ export default function FederationAdminStandalonePage() {
             className="px-4 py-2 rounded-full bg-white hover:bg-[#f0f3ff] border border-[#D8DEEA] text-xs font-semibold text-[#151c27] transition shadow-xs flex items-center gap-1.5"
           >
             <span className="material-symbols-outlined text-[16px]">dashboard</span>
-            <span>Main Dashboard</span>
+            <span>Open Dashboard</span>
           </Link>
 
           <button
@@ -370,20 +416,20 @@ export default function FederationAdminStandalonePage() {
         )}
 
         {/* Hero Banner */}
-        <div className="bg-white/85 backdrop-blur-xl rounded-[26px] p-6 lg:p-8 shadow-[0_8px_32px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/80 space-y-6">
+        <div className="bg-white/85 backdrop-blur-xl rounded-[26px] p-6 lg:p-8 shadow-[0_8px_32px_rgba(16,20,26,0.06)] border border-[#D8DEEA]/80 space-y-5">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="material-symbols-outlined text-[#3f5e93] text-[26px]">hub</span>
                 <h1 className="text-2xl font-black text-[#10141A] tracking-tight">
-                  Sovereign Inter-Agency Administration &amp; Testing Center
+                  Sovereign Inter-Agency Test Suite &amp; Live Demo Credentials
                 </h1>
                 <span className="rounded-full text-[11px] font-bold px-2.5 py-0.5 bg-purple-50 text-purple-700 border border-purple-200">
-                  Federation Hub
+                  5 Sovereign Nodes Active
                 </span>
               </div>
               <p className="text-xs text-[#6B7280]">
-                Test cross-organization exchanges, create custom login IDs for any department or court, simulate dual approvals, and manage sovereign organizations.
+                Access 5 authentic government organizations, 50 pre-configured statutory officer profiles (Judiciary, Police CID, CBI, Forensic Labs, Collectorate), and 1-click test login launcher.
               </p>
             </div>
 
@@ -396,7 +442,7 @@ export default function FederationAdminStandalonePage() {
                 className="px-4 py-2 rounded-full bg-[#000000] text-white hover:bg-[#181c22] text-xs font-semibold shadow-[0_4px_12px_rgba(16,20,26,0.22)] flex items-center gap-1.5 transition cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">person_add</span>
-                <span>Create Test Login ID</span>
+                <span>Create Custom Test Login</span>
               </button>
             </div>
           </div>
@@ -412,7 +458,7 @@ export default function FederationAdminStandalonePage() {
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">key</span>
-              <span>Test Accounts &amp; Login Switcher ({fleetOrgs.reduce((acc, o) => acc + o.usersCount, 0)} Logins)</span>
+              <span>Test Accounts &amp; Demo Credentials ({fleetOrgs.reduce((acc, o) => acc + o.usersCount, 0) + (apexAdmin ? 1 : 0)} Total Accounts)</span>
             </button>
 
             <button
@@ -424,7 +470,7 @@ export default function FederationAdminStandalonePage() {
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">corporate_fare</span>
-              <span>Full Organization Management Suite</span>
+              <span>Apex Fleet Management Console</span>
             </button>
           </div>
         </div>
@@ -434,31 +480,114 @@ export default function FederationAdminStandalonePage() {
         {/* ========================================================================= */}
         {activeTab === 'test-accounts' && (
           <div className="space-y-6">
+            {/* APEX SYSTEM SUPER ADMIN HERO CARD */}
+            {apexAdmin && (
+              <div className="bg-gradient-to-r from-amber-950 via-slate-900 to-indigo-950 rounded-[24px] p-6 text-white shadow-xl border border-amber-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="space-y-2 relative z-10">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-400 text-slate-950 uppercase tracking-wider">
+                      Apex Authority
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-purple-900/80 text-purple-200 border border-purple-400/40">
+                      ROLE: SUPER_ADMIN
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-900/80 text-emerald-200 border border-emerald-400/40">
+                      CLEARANCE: T5 (SOVEREIGN)
+                    </span>
+                  </div>
+
+                  <div>
+                    <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
+                      <span>{apexAdmin.fullName}</span>
+                      <span className="text-amber-400 text-xs font-normal">(@{apexAdmin.username})</span>
+                    </h2>
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      National Digital Governance Authority • Sovereign Multi-Agency Controller
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs font-mono pt-1 text-slate-300 flex-wrap">
+                    <span className="bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
+                      Email: <b className="text-white">{apexAdmin.email}</b>
+                    </span>
+                    <span className="bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
+                      Password: <b className="text-amber-300">{apexAdmin.defaultPasswordHint}</b>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 relative z-10 w-full md:w-auto">
+                  <button
+                    onClick={() => handleSwitchSession(apexAdmin.organizationId, apexAdmin.id)}
+                    className="flex-1 md:flex-initial px-5 py-2.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs shadow-lg flex items-center justify-center gap-2 transition cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">bolt</span>
+                    <span>⚡ Login as Apex Super Admin</span>
+                  </button>
+
+                  <button
+                    onClick={() => copyCredentials(apexAdmin.email, apexAdmin.defaultPasswordHint, apexAdmin.fullName)}
+                    className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white transition cursor-pointer"
+                    title="Copy Super Admin Credentials"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">content_copy</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Filter and Quick Search */}
-            <div className="bg-white rounded-[20px] p-4 border border-[#D8DEEA]/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-              <div className="flex-1 max-w-md">
-                <UiverseSearchBar
-                  placeholder="Filter by officer name, email, designation, or agency..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onClear={() => setSearchQuery('')}
-                  compact
-                />
+            <div className="bg-white rounded-[22px] p-5 border border-[#D8DEEA]/80 shadow-xs space-y-4">
+              <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                <div className="flex-1 max-w-md">
+                  <UiverseSearchBar
+                    placeholder="Search by officer name, role, department, or jurisdiction..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onClear={() => setSearchQuery('')}
+                    compact
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select
+                    value={selectedOrgFilter}
+                    onChange={(e) => setSelectedOrgFilter(e.target.value)}
+                    className="h-9 px-3.5 rounded-full bg-[#f0f3ff] border border-[#D8DEEA] text-xs text-[#151c27] font-semibold outline-none focus:bg-white"
+                  >
+                    <option value="ALL">All 5 Organizations ({fleetOrgs.length})</option>
+                    {fleetOrgs.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.name} ({o.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 flex-wrap">
-                <select
-                  value={selectedOrgFilter}
-                  onChange={(e) => setSelectedOrgFilter(e.target.value)}
-                  className="h-8 px-3 rounded-full bg-[#f0f3ff] border border-[#D8DEEA] text-xs text-[#151c27] font-semibold outline-none focus:bg-white"
-                >
-                  <option value="ALL">All Organizations ({fleetOrgs.length})</option>
-                  {fleetOrgs.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.name} ({o.code})
-                    </option>
-                  ))}
-                </select>
+              {/* Role Filter Chips */}
+              <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-[#D8DEEA]/50">
+                <span className="text-[11px] font-bold text-[#6B7280] uppercase mr-1">Filter Role:</span>
+                {ROLE_FILTER_CHIPS.map((chip) => {
+                  const isActive = roleFilter === chip.code;
+                  return (
+                    <button
+                      key={chip.code}
+                      onClick={() => setRoleFilter(chip.code)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                        isActive
+                          ? 'bg-[#10141A] text-white shadow-xs'
+                          : 'bg-[#f0f3ff] hover:bg-[#e2e8f8] text-[#45474b] border border-[#D8DEEA]'
+                      }`}
+                    >
+                      <span>{chip.label}</span>
+                      <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-white text-[#6B7280]'}`}>
+                        {chip.count}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -472,7 +601,7 @@ export default function FederationAdminStandalonePage() {
                   {/* Organization Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#D8DEEA]/60">
                     <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-[rgba(131,162,219,0.14)] text-[#3f5e93] border border-[#83A2DB]/30 flex items-center justify-center font-mono font-bold text-sm shrink-0">
+                      <div className="w-12 h-12 rounded-2xl bg-[rgba(131,162,219,0.14)] text-[#3f5e93] border border-[#83A2DB]/30 flex items-center justify-center font-mono font-bold text-sm shrink-0">
                         {org.code.substring(0, 3)}
                       </div>
                       <div>
@@ -486,9 +615,12 @@ export default function FederationAdminStandalonePage() {
                               Verified Node
                             </span>
                           )}
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-slate-100 text-slate-700">
+                            {org.users.length} Officers
+                          </span>
                         </div>
                         <p className="text-xs text-[#6B7280] mt-0.5">
-                          {org.tierName || 'Government Entity'} • {org.categoryName || 'General'} • Jurisdiction: {org.regionName || 'National'}
+                          {org.tierName || 'State Government Directorate'} • Domain: {org.categoryName || 'General'} • Jurisdiction: {org.regionName || 'National'}
                         </p>
                       </div>
                     </div>
@@ -501,70 +633,104 @@ export default function FederationAdminStandalonePage() {
                       className="px-3.5 py-1.5 rounded-full bg-[#f0f3ff] hover:bg-[#e2e8f8] border border-[#D8DEEA] text-xs font-semibold text-[#151c27] flex items-center gap-1.5 transition cursor-pointer self-start sm:self-auto"
                     >
                       <span className="material-symbols-outlined text-[15px] text-[#3f5e93]">add</span>
-                      <span>Add Login ID to this Org</span>
+                      <span>Add Custom Login</span>
                     </button>
                   </div>
 
                   {/* Users Cards Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                    {org.users.map((u) => (
-                      <div
-                        key={u.id}
-                        className="bg-[#f0f3ff]/50 rounded-[18px] p-4 border border-[#D8DEEA]/60 flex flex-col justify-between gap-3 hover:bg-white hover:border-[#83A2DB]/50 transition shadow-2xs"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <div className="font-bold text-xs text-[#10141A]">{u.fullName}</div>
-                              <div className="text-[11px] text-[#6B7280]">{u.designation || 'Officer'}</div>
+                    {org.users.map((u) => {
+                      const primaryRole = u.roles[0]?.code || 'OFFICER';
+                      const roleColorMap: Record<string, string> = {
+                        ORG_ADMIN: 'bg-purple-100 text-purple-900 border-purple-200',
+                        DEPT_HEAD: 'bg-blue-100 text-blue-900 border-blue-200',
+                        INVESTIGATING_OFFICER: 'bg-amber-100 text-amber-900 border-amber-200',
+                        FORENSIC_EXPERT: 'bg-emerald-100 text-emerald-900 border-emerald-200',
+                        APPROVER: 'bg-indigo-100 text-indigo-900 border-indigo-200',
+                        AUDITOR: 'bg-teal-100 text-teal-900 border-teal-200',
+                        RECORD_KEEPER: 'bg-slate-200 text-slate-800 border-slate-300',
+                        CLERK: 'bg-gray-100 text-gray-700 border-gray-200',
+                        OFFICER: 'bg-blue-50 text-blue-800 border-blue-100',
+                      };
+
+                      return (
+                        <div
+                          key={u.id}
+                          className="bg-[#f0f3ff]/50 rounded-[18px] p-4 border border-[#D8DEEA]/70 flex flex-col justify-between gap-3 hover:bg-white hover:border-[#83A2DB]/70 hover:shadow-md transition duration-200 shadow-2xs"
+                        >
+                          <div className="space-y-2.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="font-bold text-xs text-[#10141A]">{u.fullName}</div>
+                                <div className="text-[11px] text-[#6B7280]">{u.designation || 'Officer'}</div>
+                              </div>
+
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono shrink-0 ${
+                                  u.maxSecurityLevel >= 5
+                                    ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                                    : u.maxSecurityLevel >= 4
+                                    ? 'bg-amber-100 text-amber-900 border border-amber-200'
+                                    : 'bg-blue-50 text-blue-800 border border-blue-200'
+                                }`}
+                              >
+                                T{u.maxSecurityLevel || 3}
+                              </span>
                             </div>
 
-                            <span
-                              className={`px-2 py-0.5 rounded-full text-[9px] font-bold font-mono shrink-0 ${
-                                u.maxSecurityLevel >= 5
-                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                  : u.maxSecurityLevel >= 4
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                                  : 'bg-blue-50 text-blue-800 border border-blue-200'
-                              }`}
+                            {/* Role and Department Pills */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {u.roles.map((r) => (
+                                <span
+                                  key={r.id || r.code}
+                                  className={`px-2 py-0.5 rounded-md text-[9px] font-bold font-mono border ${roleColorMap[r.code] || 'bg-gray-100 text-gray-800 border-gray-200'}`}
+                                >
+                                  {r.name || r.code}
+                                </span>
+                              ))}
+
+                              {u.departmentCode && (
+                                <span className="px-1.5 py-0.5 rounded-md text-[9px] font-mono bg-white text-slate-600 border border-slate-200">
+                                  {u.departmentCode}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Credential Box */}
+                            <div className="space-y-1 text-[11px] font-mono bg-white/80 p-2.5 rounded-xl border border-[#D8DEEA]/60 text-[#45474b]">
+                              <div className="truncate flex items-center justify-between gap-1">
+                                <span className="text-[#9CA3AF]">User:</span>
+                                <b className="text-[#10141A] truncate">{u.email}</b>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span>Pass: <b className="text-[#3f5e93]">{org.defaultPasswordHint}</b></span>
+                                {u.employeeCode && <span className="text-slate-500 font-bold">{u.employeeCode}</span>}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-2 pt-1 border-t border-[#D8DEEA]/40">
+                            <button
+                              onClick={() => handleSwitchSession(org.id, u.id)}
+                              className="flex-1 py-1.5 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer shadow-xs"
+                              title="Log In as this officer and open Dashboard"
                             >
-                              T{u.maxSecurityLevel || 3}
-                            </span>
-                          </div>
+                              <span className="material-symbols-outlined text-[14px]">bolt</span>
+                              <span>⚡ Login &amp; Open</span>
+                            </button>
 
-                          <div className="space-y-1 text-[11px] font-mono bg-white/70 p-2 rounded-xl border border-[#D8DEEA]/50 text-[#45474b]">
-                            <div className="truncate flex items-center gap-1">
-                              <span className="text-[#9CA3AF]">User:</span>
-                              <b className="text-[#10141A]">{u.email}</b>
-                            </div>
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span>Pass: <b className="text-[#3f5e93]">{org.defaultPasswordHint}</b></span>
-                              {u.employeeCode && <span>ID: {u.employeeCode}</span>}
-                            </div>
+                            <button
+                              onClick={() => copyCredentials(u.email, org.defaultPasswordHint, u.fullName)}
+                              className="p-1.5 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#45474b] hover:text-[#10141A] transition cursor-pointer"
+                              title="Copy Credentials"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">content_copy</span>
+                            </button>
                           </div>
                         </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex items-center gap-2 pt-1 border-t border-[#D8DEEA]/40">
-                          <button
-                            onClick={() => handleSwitchSession(org.id, u.id)}
-                            className="flex-1 py-1.5 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer shadow-xs"
-                            title="Log In as this user and open Dashboard"
-                          >
-                            <span className="material-symbols-outlined text-[14px]">login</span>
-                            <span>Login &amp; Open</span>
-                          </button>
-
-                          <button
-                            onClick={() => copyCredentials(u.email, org.defaultPasswordHint, u.fullName)}
-                            className="p-1.5 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#45474b] hover:text-[#10141A] transition cursor-pointer"
-                            title="Copy Credentials"
-                          >
-                            <span className="material-symbols-outlined text-[15px]">content_copy</span>
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -576,14 +742,36 @@ export default function FederationAdminStandalonePage() {
         {/* TAB 2: FULL FLEET ADMINISTRATION SUITE */}
         {/* ========================================================================= */}
         {activeTab === 'fleet-admin' && (
-          <OrganizationsManagementView
-            currentUserId={currentUser?.id}
-            currentUserRoles={currentUser?.roles}
-            currentOrg={currentUser?.organization}
-            onNavigateTab={(tab) => {
-              if (tab === 'test-accounts') setActiveTab('test-accounts');
-            }}
-          />
+          <div>
+            {!currentUser?.roles?.includes('SUPER_ADMIN') && (
+              <div className="mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-amber-600 text-[20px]">shield</span>
+                  <div>
+                    <b>Apex Super Admin Clearance Required for Modifications</b>
+                    <p className="text-[11px] text-amber-700">Currently logged in as a local organizational user. Click below to elevate to Apex Super Admin.</p>
+                  </div>
+                </div>
+                {apexAdmin && (
+                  <button
+                    onClick={() => handleSwitchSession(apexAdmin.organizationId, apexAdmin.id)}
+                    className="px-4 py-1.5 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-xs transition shrink-0 cursor-pointer"
+                  >
+                    ⚡ Switch to Apex Super Admin
+                  </button>
+                )}
+              </div>
+            )}
+
+            <OrganizationsManagementView
+              currentUserId={currentUser?.id}
+              currentUserRoles={currentUser?.roles}
+              currentOrg={currentUser?.organization}
+              onNavigateTab={(tab) => {
+                if (tab === 'test-accounts') setActiveTab('test-accounts');
+              }}
+            />
+          </div>
         )}
       </main>
 

@@ -119,7 +119,7 @@ export default function OrganizationsManagementView({
   onNavigateTab,
 }: OrganizationsManagementViewProps) {
   const isSuperAdmin = currentUserRoles.includes('SUPER_ADMIN');
-  const canManageFleet = isSuperAdmin || currentUserPermissions.includes('FEDERATION_MANAGE') || currentUserPermissions.includes('PERMISSION_MANAGE');
+  const canManageFleet = isSuperAdmin;
 
   // Main View Navigation: 'fleet' | 'inspector' | 'taxonomies'
   const [activeMainTab, setActiveMainTab] = useState<'fleet' | 'inspector' | 'taxonomies'>('fleet');
@@ -385,6 +385,31 @@ export default function OrganizationsManagementView({
       return matchesSearch && matchesTier && matchesCategory;
     });
   }, [organizations, searchQuery, tierFilter, categoryFilter]);
+
+  if (!isSuperAdmin) {
+    return (
+      <div className="w-full max-w-4xl mx-auto mt-8 bg-white/90 backdrop-blur-xl rounded-[26px] p-8 lg:p-12 shadow-[0_8px_32px_rgba(16,20,26,0.06)] border border-red-200/80 text-center space-y-4 animate-fadeIn">
+        <div className="w-14 h-14 rounded-full bg-red-50 border border-red-200 text-red-600 flex items-center justify-center mx-auto shadow-xs">
+          <span className="material-symbols-outlined text-[30px]">lock</span>
+        </div>
+        <div className="space-y-1">
+          <h2 className="text-xl font-bold text-[#151c27]">Sovereign Fleet Governance — Restricted</h2>
+          <p className="text-xs text-[#6B7280] max-w-lg mx-auto leading-relaxed">
+            The Organizations Management module is strictly reserved for <strong>Apex System Super Administrators</strong>.
+            Local Organization Administrators are restricted from managing other sovereign agencies and federation nodes.
+          </p>
+        </div>
+        <div className="pt-2">
+          <button
+            onClick={() => onNavigateTab?.('overview')}
+            className="px-5 py-2 rounded-full bg-[#151c27] hover:bg-black text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+          >
+            Return to Overview Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto space-y-6 animate-fadeIn pb-16">

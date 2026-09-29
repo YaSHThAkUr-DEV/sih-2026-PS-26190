@@ -129,20 +129,11 @@ export function canExportCrossOrgAudit(session: UserSessionPayload): boolean {
 }
 
 export function canViewFederationFleet(session: UserSessionPayload): boolean {
-  return isSuperAdmin(session) || hasAnyPermission(session, [
-    'FEDERATION_VIEW',
-    'FEDERATION_MANAGE',
-    'PERMISSION_MANAGE',
-    'USER_MANAGE',
-    'DEPARTMENT_MANAGE'
-  ]);
+  return isSuperAdmin(session);
 }
 
 export function canManageFederationFleet(session: UserSessionPayload): boolean {
-  return isSuperAdmin(session) || hasAnyPermission(session, [
-    'FEDERATION_MANAGE',
-    'PERMISSION_MANAGE'
-  ]);
+  return isSuperAdmin(session);
 }
 
 // ---------------------------------------------------------------------------
