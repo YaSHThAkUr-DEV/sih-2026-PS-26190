@@ -210,3 +210,4 @@ cloudflared.exe
 *.doc
 *.docx
 scripts copy/
+docments/
