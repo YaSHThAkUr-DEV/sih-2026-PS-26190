@@ -262,14 +262,24 @@ BLOCKCHAIN_CHAINCODE_NAME=dms_audit_cc
 
 ## 🗄️ Database Migrations & Seeding
 
-Run the migration and seeding scripts in sequence using `tsx`:
+### Option A: 1-Click Automated Setup (Recommended)
+Run the master initialization command which automatically creates all tables from `schema.sql`, applies migrations, seeds 5 sovereign government agencies, sets up maker-checker workflows, and runs the health check:
+
+```bash
+npm run setup
+```
+
+---
+
+### Option B: Step-by-Step Manual Execution
+Alternatively, you can run each initialization and seeding script individually:
 
 ```bash
 # 1. Initialize PostgreSQL database and core schema
-npx tsx scripts/init-db.ts
+npm run db:init
 
-# 2. Seed default roles, permissions, clearance tiers, and primary accounts
-npx tsx scripts/seed.ts
+# 2. Seed 5 Sovereign Government Agencies, Clearance Tiers, and Users
+npx tsx scripts/seed-5-government-orgs.ts
 
 # 3. Apply Multi-Organization Collaboration & Federation Schema
 npx tsx scripts/migrate-collaboration.ts

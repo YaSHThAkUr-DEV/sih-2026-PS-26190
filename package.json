@@ -4,6 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "setup": "tsx scripts/setup-complete.ts",
+    "verify": "tsx scripts/verify-all-connections.ts",
+    "db:init": "tsx scripts/init-db.ts",
+    "db:seed": "tsx scripts/setup-complete.ts",
     "tunnel": "npx -y cloudflared tunnel --url http://localhost:3000",
     "build": "next build",
     "start": "next start",
