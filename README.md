@@ -1,4 +1,4 @@
-# 🏛️ NIRMAN DMS — Secure Legal, Institutional & Inter-Agency Document Management System
+# NIRMAN DMS — Secure Legal, Institutional & Inter-Agency Document Management System
 
 > **Smart India Hackathon (SIH) Flagship Architecture**  
 > An enterprise-grade, cryptographically verifiable, multi-organization Document Management System (DMS) built for Indian Judicial, Law Enforcement, Secretariats, and Public Administration bodies.
@@ -16,45 +16,47 @@
 
 ---
 
-## 📌 Table of Contents
-1. [System Highlights & Key Features](#-system-highlights--key-features)
-2. [High-Level Architecture](#-high-level-architecture)
-3. [Prerequisites](#-prerequisites)
-4. [Containerized Infrastructure (Docker)](#-containerized-infrastructure-docker)
-5. [Frontend & Custom UI Theme Architecture](#-frontend--custom-ui-theme-architecture)
-6. [Step-by-Step Installation & Setup](#-step-by-step-installation--setup)
-7. [Database Migrations & Seeding](#-database-migrations--seeding)
-8. [Pre-Seeded Demo Accounts & Credentials](#-pre-seeded-demo-accounts--credentials)
-9. [Verification & Health Checks](#-verification--health-checks)
-10. [Hyperledger Fabric Blockchain Setup (Optional)](#-hyperledger-fabric-blockchain-setup-optional)
-11. [Public Verification & Section 65B Certificates](#-public-verification--section-65b-certificates)
-12. [Cloudflare Remote Tunnel](#-cloudflare-remote-tunnel)
-13. [Directory Structure](#-directory-structure)
-14. [Available Scripts Reference](#-available-scripts-reference)
-15. [Troubleshooting & FAQ](#-troubleshooting--faq)
+## Table of Contents
+1. [System Highlights & Key Features](#system-highlights--key-features)
+2. [High-Level Architecture](#high-level-architecture)
+3. [Prerequisites](#prerequisites)
+4. [Containerized Infrastructure (Docker)](#containerized-infrastructure-docker)
+5. [Frontend & Custom UI Theme Architecture](#frontend--custom-ui-theme-architecture)
+6. [Step-by-Step Installation & Setup](#step-by-step-installation--setup)
+7. [Database Migrations & Seeding](#database-migrations--seeding)
+8. [Pre-Seeded Demo Accounts & Credentials](#pre-seeded-demo-accounts--credentials)
+9. [Verification & Health Checks](#verification--health-checks)
+10. [Running the Application](#running-the-application)
+11. [Hyperledger Fabric Blockchain Setup (Optional)](#hyperledger-fabric-blockchain-setup-optional)
+12. [Public Verification & Section 65B Certificates](#public-verification--section-65b-certificates)
+13. [Cloudflare Remote Tunnel](#cloudflare-remote-tunnel)
+14. [Directory Structure](#directory-structure)
+15. [Available Scripts Reference](#available-scripts-reference)
+16. [Troubleshooting & FAQ](#troubleshooting--faq)
+17. [License & Intellectual Property](#license--intellectual-property)
 
 ---
 
-## 🌟 System Highlights & Key Features
+## System Highlights & Key Features
 
-* **⚖️ Section 65B Statutory Judicial Certification**:
+* **Section 65B Statutory Judicial Certification**:
   Generates automated, court-admissible *Certificates of Electronic Evidence* under Section 65B(4) of the Indian Evidence Act, sealed with SHA-256 HMAC digital signatures and dynamic QR verification codes.
-* **🛡️ WORM (Write Once Read Many) Immutability**:
+* **WORM (Write Once Read Many) Immutability**:
   Strict tamper-proofing ensuring evidentiary document hashes cannot be overwritten, modified, or silently scrubbed once ingested.
-* **🌐 Multi-Organization Collaboration Highway & Federation**:
+* **Multi-Organization Collaboration Highway & Federation**:
   Cross-agency document requisition, dynamic forensic watermarking, dual-custody transfers between Central Gov, State Directorates, Judiciary, Police, and Forensic Labs.
-* **🔒 Maker-Checker Dual-Custody Approval Workflows**:
+* **Maker-Checker Dual-Custody Approval Workflows**:
   Quarantines sensitive dockets (Security Clearance T4/T5) requiring multi-officer sign-off before publication.
-* **🔗 Immutable Audit Ledger & Blockchain Anchoring**:
+* **Immutable Audit Ledger & Blockchain Anchoring**:
   Anchors Merkle roots and audit trail blocks onto **Hyperledger Fabric 2.5** (with fallback simulated cryptographic hash chains).
-* **🔍 Deep OCR & GIN Full-Text Search**:
+* **Deep OCR & GIN Full-Text Search**:
   Local Tesseract 7.0 engine extracting text from scanned Hindi/English notices, dockets, and PDFs with PostgreSQL GIN indexed vectors.
-* **🎨 3D WebGL Shader UI & Glassmorphic Design System**:
+* **3D WebGL Shader UI & Glassmorphic Design System**:
   Modern dark/light glassmorphic interface powered by Three.js interactive shaders, customized loaders, and fluid responsive dashboards.
 
 ---
 
-## 🏛️ High-Level Architecture
+## High-Level Architecture
 
 ```text
                +-------------------------------------------------------------+
@@ -94,7 +96,7 @@
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 Before running NIRMAN DMS, ensure the following software is installed on your workstation:
 
@@ -108,7 +110,7 @@ Before running NIRMAN DMS, ensure the following software is installed on your wo
 
 ---
 
-## 🐳 Containerized Infrastructure (Docker)
+## Containerized Infrastructure (Docker)
 
 To run the full backend stack locally (PostgreSQL, Redis, MinIO, and Vault), you can use Docker Compose.
 
@@ -184,7 +186,7 @@ docker compose up -d
 
 ---
 
-## 🎨 Frontend & Custom UI Theme Architecture
+## Frontend & Custom UI Theme Architecture
 
 NIRMAN DMS features a custom-engineered UI theme designed for high-clarity government operations:
 
@@ -206,7 +208,7 @@ NIRMAN DMS features a custom-engineered UI theme designed for high-clarity gover
 
 ---
 
-## 🚀 Step-by-Step Installation & Setup
+## Step-by-Step Installation & Setup
 
 ### Step 1: Clone the Repository
 ```bash
@@ -260,7 +262,7 @@ BLOCKCHAIN_CHAINCODE_NAME=dms_audit_cc
 
 ---
 
-## 🗄️ Database Migrations & Seeding
+## Database Migrations & Seeding
 
 ### Option A: 1-Click Automated Setup (Recommended)
 Run the master initialization command which automatically creates all tables from `schema.sql`, applies migrations, seeds 5 sovereign government agencies, sets up maker-checker workflows, and runs the health check:
@@ -293,7 +295,7 @@ npx tsx scripts/seed-retention-policies.ts
 
 ---
 
-## 🔑 Pre-Seeded Demo Accounts & Credentials
+## Pre-Seeded Demo Accounts & Credentials
 
 The seed pipeline generates complete pre-configured roles across government tiers with granular security clearances:
 
@@ -309,7 +311,7 @@ The seed pipeline generates complete pre-configured roles across government tier
 
 ---
 
-## 🔍 Verification & Health Checks
+## Verification & Health Checks
 
 Run the automated diagnostic suite to verify that all 9 subsystems are healthy and connected:
 
@@ -330,7 +332,7 @@ npx tsx scripts/verify-all-connections.ts
 
 ---
 
-## 🏃 Running the Application
+## Running the Application
 
 ### Start the Next.js Development Server
 ```bash
@@ -346,7 +348,7 @@ npm run start
 
 ---
 
-## 🔗 Hyperledger Fabric Blockchain Setup (Optional)
+## Hyperledger Fabric Blockchain Setup (Optional)
 
 If you wish to test with an enterprise Hyperledger Fabric 2.5 blockchain network rather than the zero-dependency simulated ledger:
 
@@ -370,7 +372,7 @@ If you wish to test with an enterprise Hyperledger Fabric 2.5 blockchain network
 
 ---
 
-## 📜 Public Verification & Section 65B Certificates
+## Public Verification & Section 65B Certificates
 
 ### Public Document Verification Portal
 Anyone with a document hash or QR code can verify its authenticity without logging into the system:
@@ -388,7 +390,7 @@ Anyone with a document hash or QR code can verify its authenticity without loggi
 
 ---
 
-## 🌐 Cloudflare Remote Tunnel
+## Cloudflare Remote Tunnel
 
 To present or test the live application across remote devices without port-forwarding:
 
@@ -399,7 +401,7 @@ This executes `cloudflared tunnel` and outputs a temporary secure HTTPS public U
 
 ---
 
-## 📂 Directory Structure
+## Directory Structure
 
 ```text
 ├── app/                          # Next.js App Router
@@ -445,7 +447,7 @@ This executes `cloudflared tunnel` and outputs a temporary secure HTTPS public U
 
 ---
 
-## 🛠️ Available Scripts Reference
+## Available Scripts Reference
 
 | Command | Description |
 |---|---|
@@ -464,7 +466,7 @@ This executes `cloudflared tunnel` and outputs a temporary secure HTTPS public U
 
 ---
 
-## ❓ Troubleshooting & FAQ
+## Troubleshooting & FAQ
 
 ### 1. `error: column reference "document_id" is ambiguous`
 * **Fix**: Ensure you have executed the latest migration scripts (`npx tsx scripts/migrate-collaboration.ts`). All audit queries have been disambiguated with explicit table alias qualifiers (`d.id`).
@@ -486,7 +488,7 @@ This executes `cloudflared tunnel` and outputs a temporary secure HTTPS public U
 
 ---
 
-## 📄 License & Intellectual Property
+## License & Intellectual Property
 
 Developed for the **Smart India Hackathon (SIH)**.  
 Built for sovereign government, judicial, and high-security public sector document management applications.
