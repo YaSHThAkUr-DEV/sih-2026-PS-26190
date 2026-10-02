@@ -338,96 +338,119 @@ export default function FederationAdminView({
       {/* ========================================================================= */}
       {activeTab === 'fleet' && (
         <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-3 bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
-            <span className="material-symbols-outlined text-gray-400">search</span>
-            <input
-              type="text"
-              placeholder="Search by organization name, code, nodal officer, or state..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none"
-            />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xs">
+            <div className="flex items-center gap-2.5 flex-1">
+              <span className="material-symbols-outlined text-gray-400">search</span>
+              <input
+                type="text"
+                placeholder="Search by organization name, code, nodal officer, or state..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none"
+              />
+            </div>
+            <span className="text-xs text-gray-500 font-semibold px-2 shrink-0">
+              {filteredOrgs.length} Sovereign Entities Connected
+            </span>
           </div>
 
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-500 font-semibold border-b border-gray-200 dark:border-gray-800">
+                <thead className="bg-gray-50 dark:bg-gray-800/60 text-gray-500 font-bold uppercase tracking-wider text-[10px] border-b border-gray-200 dark:border-gray-800">
                   <tr>
-                    <th className="p-3.5">Organization Code</th>
-                    <th className="p-3.5">Government Body Name</th>
-                    <th className="p-3.5">Domain Category</th>
-                    <th className="p-3.5">Jurisdiction</th>
-                    <th className="p-3.5">Officers</th>
-                    <th className="p-3.5">Vault Docs</th>
-                    <th className="p-3.5">Exchanges</th>
-                    <th className="p-3.5">Status</th>
-                    <th className="p-3.5 text-right">Configure</th>
+                    <th className="py-3.5 px-4">Org Code</th>
+                    <th className="py-3.5 px-4">Government Agency &amp; Nodal Authority</th>
+                    <th className="py-3.5 px-3">Domain Category</th>
+                    <th className="py-3.5 px-3">Jurisdiction</th>
+                    <th className="py-3.5 px-2 text-center">Officers</th>
+                    <th className="py-3.5 px-2 text-center">Vault Docs</th>
+                    <th className="py-3.5 px-3 text-center">Exchanges</th>
+                    <th className="py-3.5 px-3">Status</th>
+                    <th className="py-3.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {filteredOrgs.map((org, idx) => (
-                    <tr key={`fed-org-${org.id}-${idx}`} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-all">
-                      <td className="p-3.5 font-mono font-bold text-blue-600 dark:text-blue-400">
-                        {org.code}
-                      </td>
-
-                      <td className="p-3.5">
-                        <strong className="text-gray-900 dark:text-white block">{org.name}</strong>
-                        <span className="text-gray-500 text-[11px]">Nodal: {org.nodalOfficerName || 'Registrar'}</span>
-                      </td>
-
-                      <td className="p-3.5">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                          {org.categoryName || 'General'}
-                        </span>
-                      </td>
-
-                      <td className="p-3.5 text-gray-600 dark:text-gray-400">
-                        {org.regionName || 'National'}
-                      </td>
-
-                      <td className="p-3.5 font-semibold text-gray-800 dark:text-gray-200">{org.usersCount || 0}</td>
-                      <td className="p-3.5 font-semibold text-gray-800 dark:text-gray-200">{org.documentsCount || 0}</td>
-
-                      <td className="p-3.5">
-                        <span className="text-emerald-600 font-semibold">{org.inboundRequestsCount || 0} In</span>
-                        <span className="text-gray-400 mx-1">/</span>
-                        <span className="text-blue-600 font-semibold">{org.outboundRequestsCount || 0} Out</span>
-                      </td>
-
-                      <td className="p-3.5">
-                        {org.isVerified ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
-                            ● Verified Node
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                            ● Pending
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="p-3.5 text-right">
-                        <button
-                          onClick={() => {
-                            setConfigOrg(org);
-                            setEditFeatures({
-                              feature_approvals: org.features?.feature_approvals !== false,
-                              feature_section_65b: org.features?.feature_section_65b !== false,
-                              feature_retention_holds: org.features?.feature_retention_holds !== false,
-                              feature_blockchain: org.features?.feature_blockchain !== false,
-                              feature_deep_ocr: org.features?.feature_deep_ocr !== false,
-                              feature_inter_org_collaboration: org.features?.feature_inter_org_collaboration !== false,
-                            });
-                          }}
-                          className="px-2.5 py-1 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-[11px] font-semibold cursor-pointer"
-                        >
-                          Policies &amp; Flags
-                        </button>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-gray-900 dark:text-white">
+                  {filteredOrgs.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-10 text-center text-gray-500">
+                        No organizations found matching your search.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredOrgs.map((org, idx) => (
+                      <tr key={`fed-org-${org.id}-${idx}`} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/40 transition-all">
+                        <td className="py-3.5 px-4 font-mono font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800">
+                            {org.code}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <strong className="text-gray-900 dark:text-white block font-bold">{org.name}</strong>
+                          <span className="text-gray-500 text-[11px] flex items-center gap-1 mt-0.5">
+                            <span className="material-symbols-outlined text-[13px] text-gray-400">person</span>
+                            <span>Nodal: {org.nodalOfficerName || 'Registrar'}</span>
+                            {org.nodalOfficerEmail && <span className="text-gray-400">({org.nodalOfficerEmail})</span>}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-3 whitespace-nowrap">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            {org.categoryName || 'General'}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-3 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                          <div className="font-semibold">{org.regionName || 'National'}</div>
+                          {org.stateCode && <div className="text-[10px] font-mono text-gray-400">{org.stateCode}</div>}
+                        </td>
+
+                        <td className="py-3.5 px-2 text-center font-mono font-bold text-gray-800 dark:text-gray-200">{org.usersCount || 0}</td>
+                        <td className="py-3.5 px-2 text-center font-mono font-bold text-purple-600 dark:text-purple-400">{org.documentsCount || 0}</td>
+
+                        <td className="py-3.5 px-3 text-center whitespace-nowrap text-[11px]">
+                          <span className="text-emerald-600 font-bold font-mono">{org.inboundRequestsCount || 0} In</span>
+                          <span className="text-gray-400 mx-1">/</span>
+                          <span className="text-blue-600 font-bold font-mono">{org.outboundRequestsCount || 0} Out</span>
+                        </td>
+
+                        <td className="py-3.5 px-3 whitespace-nowrap">
+                          {org.isVerified ? (
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-800">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span>Verified Node</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-300">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              <span>Pending</span>
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                          <button
+                            onClick={() => {
+                              setConfigOrg(org);
+                              setEditFeatures({
+                                feature_approvals: org.features?.feature_approvals !== false,
+                                feature_section_65b: org.features?.feature_section_65b !== false,
+                                feature_retention_holds: org.features?.feature_retention_holds !== false,
+                                feature_blockchain: org.features?.feature_blockchain !== false,
+                                feature_deep_ocr: org.features?.feature_deep_ocr !== false,
+                                feature_inter_org_collaboration: org.features?.feature_inter_org_collaboration !== false,
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-black text-white text-[11px] font-bold shadow-xs transition cursor-pointer flex items-center gap-1 ml-auto"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">tune</span>
+                            <span>Policies</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
