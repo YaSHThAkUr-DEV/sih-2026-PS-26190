@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { ServiceSetupModal } from './ServiceSetupModal';
 import { UserPhotoUpload } from '@/components/ui/UserPhotoUpload';
 import {
   OrganizationFeatureConfig,
@@ -162,7 +161,6 @@ export default function AdministrationView({
   const [officeFeatures, setOfficeFeatures] = useState<OrganizationFeatureConfig>({ ...DEFAULT_FULL_FEATURES });
   const [officeInfo, setOfficeInfo] = useState<{ id: string; name: string; code: string; status: string } | null>(null);
   const [savingFeatures, setSavingFeatures] = useState(false);
-  const [setupModalOpen, setSetupModalOpen] = useState(false);
 
   // Global loading and feedback
   const [loading, setLoading] = useState(true);
@@ -1066,27 +1064,30 @@ export default function AdministrationView({
         {/* Header Ribbon */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="material-symbols-outlined text-[#3f5e93] text-[22px]">admin_panel_settings</span>
-              <h1 className="text-xl lg:text-2xl font-semibold text-[#10141A] tracking-tight">
-                Administration & System Controls
+              <h1 className="text-xl lg:text-2xl font-bold text-[#10141A] tracking-tight">
+                Administration &amp; System Controls
               </h1>
-              <span className="rounded-full text-[11px] font-medium px-2.5 py-0.5 bg-[rgba(131,162,219,0.14)] text-[#3f5e93] border border-[#83A2DB]/30">
+              <span className="rounded-full text-[11px] font-semibold px-2.5 py-0.5 bg-[rgba(131,162,219,0.14)] text-[#3f5e93] border border-[#83A2DB]/30">
                 Governance Suite
               </span>
             </div>
             <p className="text-xs text-[#6B7280]">
-              Unified registry for user credentials, document types & security tiers, dynamic RBAC, retention policies, and service modular features.
+              Unified registry for user credentials, document types &amp; security tiers, dynamic RBAC, retention policies, and service modular features.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
-              onClick={() => setSetupModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#000000] text-white hover:bg-[#181c22] text-xs font-medium transition shadow-[0_6px_18px_rgba(16,20,26,0.22)]"
+              onClick={() => loadAllData(false)}
+              disabled={loading}
+              className="w-9 h-9 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] flex items-center justify-center transition cursor-pointer"
+              title="Refresh Administration Data"
             >
-              <span className="material-symbols-outlined text-[16px]">domain_add</span>
-              <span>Onboard New Organization</span>
+              <span className={`material-symbols-outlined text-[18px] ${loading ? 'animate-spin' : ''}`}>
+                refresh
+              </span>
             </button>
           </div>
         </div>
@@ -3177,17 +3178,6 @@ export default function AdministrationView({
         </div>
       )}
 
-      {/* Service Setup Modal */}
-      {setupModalOpen && (
-        <ServiceSetupModal
-          isOpen={setupModalOpen}
-          onClose={() => setSetupModalOpen(false)}
-          onSuccess={() => {
-            loadAllData();
-            loadOfficeFeatures();
-          }}
-        />
-      )}
     </div>
   );
 }
