@@ -94,6 +94,75 @@ interface OrgDirectoryItem {
   activeDocumentsCount: number;
 }
 
+function TablePagination({
+  currentPage,
+  totalItems,
+  pageSize = 10,
+  onPageChange,
+  label = 'records',
+}: {
+  currentPage: number;
+  totalItems: number;
+  pageSize?: number;
+  onPageChange: (page: number) => void;
+  label?: string;
+}) {
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  if (totalItems <= pageSize && currentPage === 1) return null;
+
+  const startIdx = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIdx = Math.min(currentPage * pageSize, totalItems);
+
+  return (
+    <div className="px-5 py-3 border-t border-[#D8DEEA]/60 bg-white flex items-center justify-between flex-wrap gap-2 text-xs">
+      <span className="text-[#6B7280] text-[11px]">
+        Showing <b className="text-[#10141A]">{startIdx}–{endIdx}</b> of <b className="text-[#10141A]">{totalItems}</b> {label}
+      </span>
+
+      <div className="flex items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          className="px-3 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[11px] font-medium transition"
+        >
+          Prev
+        </button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1)
+          .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+          .map((pageNum, idx, arr) => {
+            const prev = arr[idx - 1];
+            const hasGap = prev && pageNum - prev > 1;
+            return (
+              <React.Fragment key={pageNum}>
+                {hasGap && <span className="px-1 text-[#9CA3AF] text-xs">...</span>}
+                <button
+                  type="button"
+                  onClick={() => onPageChange(pageNum)}
+                  className={`w-7 h-7 rounded-full text-[11px] font-semibold cursor-pointer transition ${
+                    currentPage === pageNum
+                      ? 'bg-[#000000] text-white shadow-2xs'
+                      : 'bg-white hover:bg-[#f0f3ff] text-[#151c27] border border-[#D8DEEA]'
+                  }`}
+                >
+                  {pageNum}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        <button
+          type="button"
+          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}
+          className="px-3 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer text-[11px] font-medium transition"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function InterOrgExchangeView({
   currentUserId,
   currentUserRoles = [],
@@ -109,10 +178,13 @@ export default function InterOrgExchangeView({
   // Navigation: 'inbound' | 'outbound' | 'directory'
   const [activeTab, setActiveTab] = useState<'inbound' | 'outbound' | 'directory'>('inbound');
 
-  // Filter States
+  // Filter & Pagination States
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [inboundPage, setInboundPage] = useState(1);
+  const [outboundPage, setOutboundPage] = useState(1);
+  const PAGE_SIZE = 8;
 
   // Data States
   const [inboundReqs, setInboundReqs] = useState<RequisitionItem[]>([]);
@@ -134,6 +206,49 @@ export default function InterOrgExchangeView({
       return o.id !== currentOrg.id && o.code !== currentOrg.code;
     });
   }, [directoryOrgs, currentOrg]);
+
+  // Filtered & Paginated Inbound Requisitions
+  const filteredInboundReqs = useMemo(() => {
+    return inboundReqs.filter((req) => {
+      if (statusFilter !== 'ALL' && req.status !== statusFilter) return false;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        req.requestNumber?.toLowerCase().includes(q) ||
+        req.subjectTitle?.toLowerCase().includes(q) ||
+        req.requestingOrgName?.toLowerCase().includes(q) ||
+        req.requestingOrgCode?.toLowerCase().includes(q) ||
+        req.requestingUserName?.toLowerCase().includes(q) ||
+        req.statutoryPurpose?.toLowerCase().includes(q)
+      );
+    });
+  }, [inboundReqs, statusFilter, searchQuery]);
+
+  const paginatedInboundReqs = useMemo(() => {
+    const start = (inboundPage - 1) * PAGE_SIZE;
+    return filteredInboundReqs.slice(start, start + PAGE_SIZE);
+  }, [filteredInboundReqs, inboundPage]);
+
+  // Filtered & Paginated Outbound Requisitions
+  const filteredOutboundReqs = useMemo(() => {
+    return outboundReqs.filter((req) => {
+      if (statusFilter !== 'ALL' && req.status !== statusFilter) return false;
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        req.requestNumber?.toLowerCase().includes(q) ||
+        req.subjectTitle?.toLowerCase().includes(q) ||
+        req.targetOrgName?.toLowerCase().includes(q) ||
+        req.targetOrgCode?.toLowerCase().includes(q) ||
+        req.statutoryPurpose?.toLowerCase().includes(q)
+      );
+    });
+  }, [outboundReqs, statusFilter, searchQuery]);
+
+  const paginatedOutboundReqs = useMemo(() => {
+    const start = (outboundPage - 1) * PAGE_SIZE;
+    return filteredOutboundReqs.slice(start, start + PAGE_SIZE);
+  }, [filteredOutboundReqs, outboundPage]);
 
   // Filter directory orgs based on searchQuery
   const filteredDirectoryOrgs = useMemo(() => {
@@ -625,24 +740,26 @@ export default function InterOrgExchangeView({
             {/* Primary Action 1: Direct Document Dispatch */}
             {canDispatch && (
               <button
+                type="button"
                 onClick={() => {
                   if (localDocs.length === 0) {
                     showToast('No documents found in your vault to share. Please ingest a document first.', 'error');
                   }
                   setDispatchModalOpen(true);
                 }}
-                className="btn-uiverse btn-uiverse-cobalt"
+                className="btn-uiverse btn-uiverse-cobalt cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">send_and_archive</span>
-                <span>⚡ Direct Document Dispatch</span>
+                <span>Direct Document Dispatch</span>
               </button>
             )}
 
             {/* Primary Action 2: Demand Requisition */}
             {canRequest && (
               <button
+                type="button"
                 onClick={() => setCreateModalOpen(true)}
-                className="btn-uiverse btn-uiverse-primary"
+                className="btn-uiverse btn-uiverse-primary cursor-pointer"
               >
                 <span className="material-symbols-outlined text-[16px]">add_task</span>
                 <span>Demand Requisition</span>
@@ -653,75 +770,126 @@ export default function InterOrgExchangeView({
 
         {/* Quick KPI Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-          <div className="bg-[#f0f3ff]/70 border border-[#D8DEEA]/70 rounded-[18px] p-3.5 flex flex-col justify-between">
+          <div className="bg-[#f0f3ff]/70 border border-[#D8DEEA]/70 rounded-[18px] p-4 flex flex-col justify-between">
             <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Inbound Demands</span>
-            <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-xl font-bold text-amber-700 font-mono">{counters.pendingInbound || 0}</span>
-              <span className="text-[11px] text-[#6B7280]">/ {counters.totalInbound || 0} total</span>
+            <div className="text-2xl font-bold text-amber-700 mt-1">
+              {counters.pendingInbound || 0}
+            </div>
+            <div className="text-[11px] text-[#6B7280] font-medium mt-0.5">
+              of {counters.totalInbound || 0} total requests
             </div>
           </div>
 
-          <div className="bg-[#f0f3ff]/70 border border-[#D8DEEA]/70 rounded-[18px] p-3.5 flex flex-col justify-between">
+          <div className="bg-[#f0f3ff]/70 border border-[#D8DEEA]/70 rounded-[18px] p-4 flex flex-col justify-between">
             <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Outbound Shared &amp; Filed</span>
-            <div className="flex items-baseline gap-1.5 mt-1">
-              <span className="text-xl font-bold text-[#3f5e93] font-mono">{counters.pendingOutbound || 0}</span>
-              <span className="text-[11px] text-emerald-700 font-semibold font-mono">({counters.approvedOutbound || 0} active shares)</span>
+            <div className="text-2xl font-bold text-[#3f5e93] mt-1">
+              {counters.pendingOutbound || 0}
+            </div>
+            <div className="text-[11px] text-emerald-700 font-medium mt-0.5">
+              {counters.approvedOutbound || 0} active decrypted shares
             </div>
           </div>
 
-          <div className="bg-[#f0f3ff]/70 border border-[#D8DEEA]/70 rounded-[18px] p-3.5 flex flex-col justify-between">
+          <div className="bg-[#f0f3ff]/70 border border-[#D8DEEA]/70 rounded-[18px] p-4 flex flex-col justify-between">
             <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Federation Nodes</span>
-            <div className="text-xl font-bold text-[#10141A] mt-1 font-mono">{directoryOrgs.length} Sovereign Bodies</div>
+            <div className="text-2xl font-bold text-[#10141A] mt-1">
+              {directoryOrgs.length}
+            </div>
+            <div className="text-[11px] text-[#6B7280] font-medium mt-0.5">
+              Verified Sovereign Bodies
+            </div>
           </div>
 
-          <div className="bg-[#f0f3ff]/70 border border-[#D8DEEA]/70 rounded-[18px] p-3.5 flex flex-col justify-between">
+          <div className="bg-[#f0f3ff]/70 border border-[#D8DEEA]/70 rounded-[18px] p-4 flex flex-col justify-between">
             <span className="text-[10px] font-bold text-[#6B7280] uppercase tracking-wider">Your Clearance</span>
-            <div className="text-xl font-bold text-emerald-700 mt-1 font-mono">Level {currentUserClearance} (T{currentUserClearance})</div>
+            <div className="text-2xl font-bold text-emerald-700 mt-1">
+              Level {currentUserClearance}
+            </div>
+            <div className="text-[11px] text-[#6B7280] font-medium mt-0.5">
+              Tier {currentUserClearance} Classification Access
+            </div>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-1.5 p-1 bg-[#f0f3ff] rounded-full w-fit border border-[#D8DEEA]/80 flex-wrap">
-          <button
-            onClick={() => setActiveTab('inbound')}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-              activeTab === 'inbound'
-                ? 'bg-[#000000] text-white shadow-xs'
-                : 'text-[#45474b] hover:text-[#10141A] hover:bg-white/60'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">move_to_inbox</span>
-            <span>Inbound Demands ({inboundReqs.length})</span>
-            {Number(counters.pendingInbound || 0) > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-400 text-black font-mono">
-                {counters.pendingInbound}
-              </span>
-            )}
-          </button>
+        {/* Navigation Tabs & Search Controls */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-1">
+          <div className="flex items-center gap-1.5 p-1 bg-[#f0f3ff] rounded-full w-fit border border-[#D8DEEA]/80 flex-wrap">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('inbound');
+                setInboundPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'inbound'
+                  ? 'bg-[#000000] text-white shadow-xs'
+                  : 'text-[#45474b] hover:text-[#10141A] hover:bg-white/60'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">move_to_inbox</span>
+              <span>Inbound Demands ({inboundReqs.length})</span>
+              {Number(counters.pendingInbound || 0) > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-400 text-black font-mono">
+                  {counters.pendingInbound}
+                </span>
+              )}
+            </button>
 
-          <button
-            onClick={() => setActiveTab('outbound')}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-              activeTab === 'outbound'
-                ? 'bg-[#000000] text-white shadow-xs'
-                : 'text-[#45474b] hover:text-[#10141A] hover:bg-white/60'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">outbox</span>
-            <span>Outbound Dispatches &amp; Requisitions ({outboundReqs.length})</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('outbound');
+                setOutboundPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'outbound'
+                  ? 'bg-[#000000] text-white shadow-xs'
+                  : 'text-[#45474b] hover:text-[#10141A] hover:bg-white/60'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">outbox</span>
+              <span>Outbound Dispatches &amp; Requisitions ({outboundReqs.length})</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('directory')}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-              activeTab === 'directory'
-                ? 'bg-[#000000] text-white shadow-xs'
-                : 'text-[#45474b] hover:text-[#10141A] hover:bg-white/60'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">corporate_fare</span>
-            <span>National Agency Directory</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('directory')}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'directory'
+                  ? 'bg-[#000000] text-white shadow-xs'
+                  : 'text-[#45474b] hover:text-[#10141A] hover:bg-white/60'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">corporate_fare</span>
+              <span>National Agency Directory</span>
+            </button>
+          </div>
+
+          {/* Search & Status Filter */}
+          {activeTab !== 'directory' && (
+            <div className="flex items-center gap-2 flex-1 max-w-md">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="h-8 px-3 rounded-full bg-[#f0f3ff] border border-[#D8DEEA] text-xs text-[#151c27] font-medium outline-none focus:bg-white cursor-pointer shrink-0"
+              >
+                <option value="ALL">All Statuses</option>
+                <option value="PENDING">Pending</option>
+                <option value="APPROVED">Approved</option>
+                <option value="REJECTED">Rejected</option>
+              </select>
+
+              <div className="flex-1">
+                <UiverseSearchBar
+                  placeholder="Filter by authority, case #, requisition..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onClear={() => setSearchQuery('')}
+                  compact
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ========================================================================= */}
@@ -729,62 +897,84 @@ export default function InterOrgExchangeView({
         {/* ========================================================================= */}
         {activeTab === 'inbound' && (
           <div className="space-y-4">
-            <div className="bg-white rounded-[20px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/80 overflow-hidden">
+            <div className="bg-white rounded-[22px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/80 overflow-hidden flex flex-col justify-between">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#f0f3ff]/60 text-[#6B7280] text-[10px] font-bold uppercase tracking-wider border-b border-[#D8DEEA]/60">
                   <tr>
-                    <th className="py-3 px-4">Requisition #</th>
-                    <th className="py-3 px-4">Requesting Authority &amp; Officer</th>
-                    <th className="py-3 px-4">Subject &amp; Statutory Grounds</th>
-                    <th className="py-3 px-3">Urgency &amp; SLA</th>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-4 text-right">Action</th>
+                    <th className="py-3 px-4 w-[18%]">Requisition # &amp; Date</th>
+                    <th className="py-3 px-4 w-[28%]">Requesting Authority &amp; Officer</th>
+                    <th className="py-3 px-4 w-[26%]">Subject &amp; Statutory Grounds</th>
+                    <th className="py-3 px-3 w-[14%]">Urgency &amp; Priority</th>
+                    <th className="py-3 px-4 w-[14%] text-right">Status &amp; Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
                   {loading ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-[#6B7280]">
+                      <td colSpan={5} className="py-12 text-center text-[#6B7280]">
                         <span className="material-symbols-outlined text-[24px] animate-spin text-[#3f5e93] block mb-1">
                           sync
                         </span>
                         Loading inbound requisitions...
                       </td>
                     </tr>
-                  ) : inboundReqs.length === 0 ? (
+                  ) : filteredInboundReqs.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-10 text-center text-[#6B7280]">
-                        No inbound requisitions currently waiting for action.
+                      <td colSpan={5} className="py-12 text-center text-[#6B7280]">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <span className="material-symbols-outlined text-[26px] text-[#9CA3AF]">inbox</span>
+                          <span className="font-semibold text-xs text-[#10141A]">No inbound demands found</span>
+                          <span className="text-[11px] text-[#9CA3AF]">
+                            {searchQuery || statusFilter !== 'ALL' ? 'Adjust your filters to see more results.' : 'No inbound requisitions currently waiting for action.'}
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ) : (
-                    inboundReqs.map((req, idx) => (
-                      <tr key={`inbound-${req.id}-${req.shareId || ''}-${idx}`} className="hover:bg-[#f0f3ff]/40 transition">
-                        <td className="py-3.5 px-4 font-mono font-bold text-[#3f5e93]">
-                          {req.requestNumber}
-                          <div className="text-[10px] text-[#9CA3AF] font-sans font-normal">
-                            {new Date(req.createdAt).toLocaleDateString()}
+                    paginatedInboundReqs.map((req, idx) => (
+                      <tr key={`inbound-${req.id}-${req.shareId || ''}-${idx}`} className="hover:bg-[#f0f3ff]/40 transition group">
+                        {/* 1. Requisition # & Date */}
+                        <td className="py-3 px-4 align-middle">
+                          <span className="font-mono font-bold text-[#3f5e93] text-xs">
+                            {req.requestNumber}
+                          </span>
+                          <div className="text-[11px] text-[#6B7280] mt-0.5">
+                            {new Date(req.createdAt).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-[#10141A]">{req.requestingOrgName}</div>
-                          <div className="text-[11px] text-[#6B7280] flex items-center gap-1 mt-0.5">
-                            <span className="material-symbols-outlined text-[13px] text-[#9CA3AF]">person</span>
-                            <span>{req.requestingUserName} ({req.requestingUserDesignation || 'Officer'})</span>
+                        {/* 2. Requesting Authority & Officer */}
+                        <td className="py-3 px-4 align-middle">
+                          <div className="font-bold text-[#10141A] text-xs leading-snug">
+                            {req.requestingOrgName}
+                          </div>
+                          <div className="text-[11px] text-[#6B7280] flex items-center gap-1 mt-0.5 truncate">
+                            <span className="material-symbols-outlined text-[12px] text-[#9CA3AF]">person</span>
+                            <span>{req.requestingUserName}</span>
+                            {req.requestingUserDesignation && (
+                              <span className="text-[#9CA3AF]">· {req.requestingUserDesignation}</span>
+                            )}
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-[#10141A]">{req.subjectTitle}</div>
-                          <div className="text-[11px] text-[#6B7280] italic mt-0.5 truncate max-w-md">
-                            &quot;{req.statutoryPurpose}&quot;
+                        {/* 3. Subject & Grounds */}
+                        <td className="py-3 px-4 align-middle">
+                          <div className="font-semibold text-[#10141A] text-xs truncate max-w-sm" title={req.subjectTitle}>
+                            {req.subjectTitle}
+                          </div>
+                          <div className="text-[11px] text-[#6B7280] truncate max-w-sm mt-0.5">
+                            {req.statutoryPurpose}
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-3 whitespace-nowrap">
+                        {/* 4. Urgency & Priority */}
+                        <td className="py-3 px-3 align-middle">
                           <span
-                            className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-semibold font-sans whitespace-nowrap shadow-2xs"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold"
                             style={{
                               backgroundColor: req.priorityBadgeColor ? `${req.priorityBadgeColor}15` : '#f0f3ff',
                               color: req.priorityBadgeColor || '#3f5e93',
@@ -799,75 +989,86 @@ export default function InterOrgExchangeView({
                           </span>
                         </td>
 
-                        <td className="py-3.5 px-3">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              req.status === 'APPROVED'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                : req.status === 'REJECTED'
-                                ? 'bg-rose-50 text-rose-800 border border-rose-200'
-                                : 'bg-amber-50 text-amber-800 border border-amber-200'
-                            }`}
-                          >
-                            {req.status}
-                          </span>
-                        </td>
+                        {/* 5. Status & Action */}
+                        <td className="py-3 px-4 align-middle text-right">
+                          <div className="flex flex-col items-end gap-1">
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                req.status === 'APPROVED'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : req.status === 'REJECTED'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}
+                            >
+                              {req.status === 'APPROVED' ? 'Approved' : req.status === 'REJECTED' ? 'Rejected' : 'Pending Review'}
+                            </span>
 
-                        <td className="py-3.5 px-4 text-right">
-                          {req.status === 'PENDING' ? (
-                            canRespond ? (
-                              <button
-                                onClick={() => {
-                                  setRespondModalReq(req);
-                                  setRespForm({
-                                    decision: 'APPROVE',
-                                    documentId: localDocs[0]?.id || '',
-                                    documentVersionId: '',
-                                    accessModeId: 'FULL_CERTIFIED_DOWNLOAD',
-                                    enableWatermark: true,
-                                    customWatermarkTemplate: '',
-                                    accessDurationDays: req.requestedAccessDays || 7,
-                                    responseNote: '',
-                                    rejectionReason: '',
-                                  });
-                                }}
-                                className="px-3.5 py-1.5 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold transition flex items-center gap-1 ml-auto cursor-pointer shadow-xs"
-                              >
-                                <span className="material-symbols-outlined text-[14px]">gavel</span>
-                                <span>Fulfill / Grant Access</span>
-                              </button>
-                            ) : (
-                              <span className="text-[10px] text-[#9CA3AF] italic">Awaiting Adjudication</span>
-                            )
-                          ) : req.shareId ? (
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => setSelectedShare(req)}
-                                className="px-3 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
-                                title="Open Live Decrypted Document"
-                              >
-                                <span className="material-symbols-outlined text-[13px]">visibility</span>
-                                <span>View Document</span>
-                              </button>
+                            {req.status === 'PENDING' ? (
+                              canRespond ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setRespondModalReq(req);
+                                    setRespForm({
+                                      decision: 'APPROVE',
+                                      documentId: localDocs[0]?.id || '',
+                                      documentVersionId: '',
+                                      accessModeId: 'FULL_CERTIFIED_DOWNLOAD',
+                                      enableWatermark: true,
+                                      customWatermarkTemplate: '',
+                                      accessDurationDays: req.requestedAccessDays || 7,
+                                      responseNote: '',
+                                      rejectionReason: '',
+                                    });
+                                  }}
+                                  className="px-3 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer shadow-xs mt-0.5"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">gavel</span>
+                                  <span>Fulfill</span>
+                                </button>
+                              ) : (
+                                <span className="text-[10px] text-[#9CA3AF] italic">Awaiting Adjudication</span>
+                              )
+                            ) : req.shareId ? (
+                              <div className="flex items-center justify-end gap-1 mt-0.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedShare(req)}
+                                  className="px-2.5 py-0.5 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
+                                  title="Open Live Decrypted Document"
+                                >
+                                  <span className="material-symbols-outlined text-[12px]">visibility</span>
+                                  <span>View</span>
+                                </button>
 
-                              <button
-                                onClick={() => setSec65BModalShare(req)}
-                                className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition"
-                                title="Generate Section 65B Electronic Certificate"
-                              >
-                                <span className="material-symbols-outlined text-[13px] text-[#3f5e93]">verified</span>
-                                <span>Sec 65B</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="text-[11px] text-[#9CA3AF] font-medium">Completed</span>
-                          )}
+                                <button
+                                  type="button"
+                                  onClick={() => setSec65BModalShare(req)}
+                                  className="px-2 py-0.5 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition"
+                                  title="Generate Section 65B Electronic Certificate"
+                                >
+                                  <span className="material-symbols-outlined text-[12px] text-[#3f5e93]">verified</span>
+                                  <span>65B</span>
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
+
+              {/* Inbound Pagination */}
+              <TablePagination
+                currentPage={inboundPage}
+                totalItems={filteredInboundReqs.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={(p) => setInboundPage(p)}
+                label="inbound demands"
+              />
             </div>
           </div>
         )}
@@ -877,92 +1078,113 @@ export default function InterOrgExchangeView({
         {/* ========================================================================= */}
         {activeTab === 'outbound' && (
           <div className="space-y-4">
-            <div className="bg-white rounded-[20px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/80 overflow-hidden">
+            <div className="bg-white rounded-[22px] shadow-[0_2px_8px_rgba(16,20,26,0.03)] border border-[#D8DEEA]/80 overflow-hidden flex flex-col justify-between">
               <table className="w-full text-left text-xs">
                 <thead className="bg-[#f0f3ff]/60 text-[#6B7280] text-[10px] font-bold uppercase tracking-wider border-b border-[#D8DEEA]/60">
                   <tr>
-                    <th className="py-3 px-4">Tracking #</th>
-                    <th className="py-3 px-4">Target Government Authority</th>
-                    <th className="py-3 px-4">Subject &amp; Statutory Ground</th>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-4 text-right">Decrypted Access &amp; Evidence</th>
+                    <th className="py-3 px-4 w-[18%]">Tracking # &amp; Date</th>
+                    <th className="py-3 px-4 w-[28%]">Target Government Authority</th>
+                    <th className="py-3 px-4 w-[26%]">Subject &amp; Statutory Grounds</th>
+                    <th className="py-3 px-3 w-[14%]">Status</th>
+                    <th className="py-3 px-4 w-[14%] text-right">Decrypted Access</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#D8DEEA]/40 text-[#10141A]">
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-[#6B7280]">
+                      <td colSpan={5} className="py-12 text-center text-[#6B7280]">
                         <span className="material-symbols-outlined text-[24px] animate-spin text-[#3f5e93] block mb-1">
                           sync
                         </span>
                         Loading outbound records...
                       </td>
                     </tr>
-                  ) : outboundReqs.length === 0 ? (
+                  ) : filteredOutboundReqs.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-10 text-center text-[#6B7280]">
-                        No outbound requisitions or document dispatches filed yet. Click &quot;⚡ Direct Document Dispatch&quot; to share an uploaded document.
+                      <td colSpan={5} className="py-12 text-center text-[#6B7280]">
+                        <div className="flex flex-col items-center justify-center gap-1">
+                          <span className="material-symbols-outlined text-[26px] text-[#9CA3AF]">outbox</span>
+                          <span className="font-semibold text-xs text-[#10141A]">No outbound records found</span>
+                          <span className="text-[11px] text-[#9CA3AF]">
+                            Click &quot;Direct Document Dispatch&quot; to share a document with an external authority.
+                          </span>
+                        </div>
                       </td>
                     </tr>
                   ) : (
-                    outboundReqs.map((req, idx) => (
-                      <tr key={`outbound-${req.id}-${req.shareId || ''}-${idx}`} className="hover:bg-[#f0f3ff]/40 transition">
-                        <td className="py-3.5 px-4 font-mono font-bold text-[#3f5e93]">
-                          {req.requestNumber}
-                          <div className="text-[10px] text-[#9CA3AF] font-sans font-normal">
-                            {new Date(req.createdAt).toLocaleDateString()}
+                    paginatedOutboundReqs.map((req, idx) => (
+                      <tr key={`outbound-${req.id}-${req.shareId || ''}-${idx}`} className="hover:bg-[#f0f3ff]/40 transition group">
+                        {/* 1. Tracking # & Date */}
+                        <td className="py-3 px-4 align-middle">
+                          <span className="font-mono font-bold text-[#3f5e93] text-xs">
+                            {req.requestNumber}
+                          </span>
+                          <div className="text-[11px] text-[#6B7280] mt-0.5">
+                            {new Date(req.createdAt).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })}
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-[#10141A]">{req.targetOrgName}</div>
-                          <div className="text-[11px] text-[#6B7280] font-mono">{req.targetOrgCode}</div>
+                        {/* 2. Target Government Authority */}
+                        <td className="py-3 px-4 align-middle">
+                          <div className="font-bold text-[#10141A] text-xs">{req.targetOrgName}</div>
+                          <div className="text-[11px] text-[#6B7280] font-mono mt-0.5">{req.targetOrgCode}</div>
                         </td>
 
-                        <td className="py-3.5 px-4">
-                          <div className="font-bold text-[#10141A]">{req.subjectTitle}</div>
-                          <div className="text-[11px] text-[#6B7280] mt-0.5 truncate max-w-md">
+                        {/* 3. Subject & Statutory Ground */}
+                        <td className="py-3 px-4 align-middle">
+                          <div className="font-semibold text-[#10141A] text-xs truncate max-w-sm" title={req.subjectTitle}>
+                            {req.subjectTitle}
+                          </div>
+                          <div className="text-[11px] text-[#6B7280] mt-0.5 truncate max-w-sm">
                             {req.legalProvisions || req.statutoryPurpose}
                           </div>
                         </td>
 
-                        <td className="py-3.5 px-3">
+                        {/* 4. Status */}
+                        <td className="py-3 px-3 align-middle">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                               req.status === 'APPROVED'
-                                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : req.status === 'REJECTED'
-                                ? 'bg-rose-50 text-rose-800 border border-rose-200'
-                                : 'bg-amber-50 text-amber-800 border border-amber-200'
+                                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
                             }`}
                           >
-                            {req.status === 'APPROVED' ? 'ACTIVE ACCESS' : req.status}
+                            {req.status === 'APPROVED' ? 'Active Access' : req.status === 'REJECTED' ? 'Rejected' : 'Pending'}
                           </span>
                         </td>
 
-                        <td className="py-3.5 px-4 text-right">
+                        {/* 5. Decrypted Access & Evidence */}
+                        <td className="py-3 px-4 align-middle text-right">
                           {req.shareId ? (
-                            <div className="flex items-center justify-end gap-1.5">
+                            <div className="flex items-center justify-end gap-1">
                               <button
+                                type="button"
                                 onClick={() => setSelectedShare(req)}
-                                className="px-3 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
+                                className="px-2.5 py-1 rounded-full bg-[#000000] hover:bg-[#181c22] text-white text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition shadow-xs"
                                 title="Open Live Decrypted Document"
                               >
-                                <span className="material-symbols-outlined text-[13px]">visibility</span>
-                                <span>View Document</span>
+                                <span className="material-symbols-outlined text-[12px]">visibility</span>
+                                <span>View</span>
                               </button>
 
                               <button
+                                type="button"
                                 onClick={() => setSec65BModalShare(req)}
-                                className="px-2.5 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition"
+                                className="px-2 py-1 rounded-full border border-[#D8DEEA] bg-white hover:bg-[#f0f3ff] text-[#151c27] text-[10px] font-semibold flex items-center gap-1 cursor-pointer transition"
                                 title="Generate Section 65B Electronic Certificate"
                               >
-                                <span className="material-symbols-outlined text-[13px] text-[#3f5e93]">verified</span>
-                                <span>Sec 65B</span>
+                                <span className="material-symbols-outlined text-[12px] text-[#3f5e93]">verified</span>
+                                <span>65B</span>
                               </button>
                             </div>
                           ) : (
-                            <span className="text-[11px] text-[#9CA3AF] italic">Awaiting recipient action</span>
+                            <span className="text-[11px] text-[#9CA3AF] italic">Awaiting action</span>
                           )}
                         </td>
                       </tr>
@@ -970,6 +1192,15 @@ export default function InterOrgExchangeView({
                   )}
                 </tbody>
               </table>
+
+              {/* Outbound Pagination */}
+              <TablePagination
+                currentPage={outboundPage}
+                totalItems={filteredOutboundReqs.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={(p) => setOutboundPage(p)}
+                label="outbound records"
+              />
             </div>
           </div>
         )}
